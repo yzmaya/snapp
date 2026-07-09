@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase functions *)",
+      "Bash(curl -s -L -o test-face.jpg \"https://thispersondoesnotexist.com\" --max-time 30)",
+      "Bash(curl -s -L -o /private/tmp/claude-501/-Users-neo-Documents-snapp/c3316ae8-ef67-4df3-8c19-e55e3b774711/scratchpad/test-face.jpg https://thispersondoesnotexist.com/ --max-time 40 -w 'http=%{http_code} size=%{size_download}\\\\n')",
+      "Bash(curl -s -o /dev/null -w \"supabase health http=%{http_code}\\\\n\" --max-time 20 \"https://dhvyjgzxfsqaminxquuf.supabase.co/functions/v1/generate-lego\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(curl -s -L -o /private/tmp/claude-501/-Users-neo-Documents-snapp/c3316ae8-ef67-4df3-8c19-e55e3b774711/scratchpad/test-face.jpg https://thispersondoesnotexist.com/ --max-time 60 -w 'http=%{http_code} size=%{size_download}\\\\n')",
+      "Bash(node /private/tmp/claude-501/-Users-neo-Documents-snapp/c3316ae8-ef67-4df3-8c19-e55e3b774711/scratchpad/test-generate.mjs)",
+      "mcp__claude_ai_Supabase__get_logs",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(curl -s -o /dev/null -w '  http=%{http_code} type=%{content_type} size=%{size_download}\\\\n' --max-time 30 https://dhvyjgzxfsqaminxquuf.supabase.co/storage/v1/object/public/generated/b59aad1e-7d10-4db0-b8f5-1bdc07808d22.png)",
+      "Bash(curl -s -o /dev/null -w '  http=%{http_code}\\\\n' --max-time 30 https://dhvyjgzxfsqaminxquuf.supabase.co/storage/v1/object/public/originals/b59aad1e-7d10-4db0-b8f5-1bdc07808d22.jpg)",
+      "Bash(node /private/tmp/claude-501/-Users-neo-Documents-snapp/c3316ae8-ef67-4df3-8c19-e55e3b774711/scratchpad/test-debug.mjs)",
+      "Bash(curl -s -o /private/tmp/claude-501/-Users-neo-Documents-snapp/c3316ae8-ef67-4df3-8c19-e55e3b774711/scratchpad/lego-result.jpg -w 'http=%{http_code} type=%{content_type} size=%{size_download}\\\\n' --max-time 40 https://dhvyjgzxfsqaminxquuf.supabase.co/storage/v1/object/public/generated/b0ef682b-61c9-4b63-83d0-56f3146d6a7e.jpg)",
+      "Bash(supabase storage *)",
+      "Bash(lsof -nP -iTCP:5180 -sTCP:LISTEN)",
+      "Bash(supabase secrets *)",
+      "Bash(git symbolic-ref *)",
+      "Bash(git config *)",
+      "Bash(git add *)"
+    ]
+  }
+}
