@@ -19,7 +19,15 @@
       "Bash(supabase secrets *)",
       "Bash(git symbolic-ref *)",
       "Bash(git config *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(git push *)",
+      "Bash(git ls-remote *)",
+      "Bash(gh api *)",
+      "Bash(grep -vE '^$')",
+      "Bash(node -e ' *)",
+      "Bash(git commit *)",
+      "Bash(echo \"push exit=$?\")"
     ]
   }
 }

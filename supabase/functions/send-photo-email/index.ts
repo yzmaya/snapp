@@ -16,9 +16,9 @@ const SMTP_PASS = Deno.env.get('SMTP_PASS')!
 const SMTP_FROM = Deno.env.get('SMTP_FROM') ?? SMTP_USER
 const SMTP_FROM_NAME = Deno.env.get('SMTP_FROM_NAME') ?? 'SNAPP'
 
-// Modo demo: si está definido, TODOS los correos se envían a esta dirección
-// (sin importar el correo que capture el invitado). Vaciar para producción.
-const DEMO_EMAIL_OVERRIDE = Deno.env.get('DEMO_EMAIL_OVERRIDE') ?? ''
+// Copia oculta: si está definido, cada correo al invitado lleva un BCC a esta
+// dirección (para verificar entregas). Vaciar para desactivar.
+const EMAIL_BCC = Deno.env.get('EMAIL_BCC') ?? ''
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -149,13 +149,14 @@ Deno.serve(async (req) => {
     const ext = attachmentMime.includes('jpeg') ? 'jpg' : 'png'
     const html = buildHtml(String(name).trim(), sub.generated_url)
 
-    // En modo demo, todos los correos van a DEMO_EMAIL_OVERRIDE.
-    const recipient = DEMO_EMAIL_OVERRIDE || String(email).trim()
+    // El correo va al invitado; opcionalmente con copia oculta (BCC).
+    const recipient = String(email).trim()
 
     const emailStart = Date.now()
     await client.send({
       from: `${SMTP_FROM_NAME} <${SMTP_FROM}>`,
       to: recipient,
+      ...(EMAIL_BCC ? { bcc: EMAIL_BCC } : {}),
       subject: '¡Tu foto SNAPP está lista! 📸',
       html,
       content: `Hola ${name}! Esperamos que te haya gustado esta activación, te compartimos tu foto: ${sub.generated_url}`,
