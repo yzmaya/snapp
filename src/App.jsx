@@ -4,7 +4,11 @@ import Brand from './components/Brand.jsx'
 import Countdown from './components/Countdown.jsx'
 import ResultModal from './components/ResultModal.jsx'
 import { useCamera } from './hooks/useCamera.js'
+import { usePrinter } from './hooks/usePrinter.js'
 import { supabase } from './lib/supabase.js'
+
+// URL de la página del aviso de privacidad (se publica junto con la app)
+const PRIVACY_URL = `${import.meta.env.BASE_URL}aviso-privacidad.html`
 
 // Estados del flujo:
 // 'live'      → cámara encendida, botón ¡Sonríe!
@@ -26,10 +30,13 @@ export default function App() {
     }
   })()
 
+  const { printer, print } = usePrinter()
+
   const [phase, setPhase] = useState('live')
   const [captured, setCaptured] = useState(null) // { blob, dataUrl }
   const [result, setResult] = useState(null) // { submissionId, generatedUrl }
   const [toast, setToast] = useState('')
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const flashRef = useRef(null)
   const smileBtnRef = useRef(null)
@@ -79,6 +86,10 @@ export default function App() {
   // ---- SNAPP → genera el LEGO ----
   const handleSnapp = async () => {
     if (!captured) return
+    if (!privacyAccepted) {
+      showToast('Debes aceptar el aviso de privacidad para continuar.')
+      return
+    }
     setPhase('generating')
     try {
       const { data, error: fnError } = await supabase.functions.invoke(
@@ -234,14 +245,39 @@ export default function App() {
         )}
 
         {phase === 'preview' && (
-          <div className="actions">
-            <button className="btn btn--ghost btn--lg" onClick={handleRetake}>
-              Tomar de nuevo
-            </button>
-            <button className="btn btn--primary btn--lg" onClick={handleSnapp}>
-              SNAPP
-            </button>
-          </div>
+          <>
+            <label className="privacy">
+              <input
+                type="checkbox"
+                checked={privacyAccepted}
+                onChange={(e) => setPrivacyAccepted(e.target.checked)}
+              />
+              <span>
+                He leído y acepto el{' '}
+                <a href={PRIVACY_URL} target="_blank" rel="noreferrer">
+                  aviso de privacidad
+                </a>
+                .
+              </span>
+            </label>
+            <div className="actions">
+              <button className="btn btn--ghost btn--lg" onClick={handleRetake}>
+                Tomar de nuevo
+              </button>
+              <button
+                className="btn btn--primary btn--lg"
+                onClick={handleSnapp}
+                disabled={!privacyAccepted}
+                title={
+                  !privacyAccepted
+                    ? 'Acepta el aviso de privacidad para continuar'
+                    : undefined
+                }
+              >
+                SNAPP
+              </button>
+            </div>
+          </>
         )}
 
         <p className="footer-note">SNAPP · Powered by IA</p>
@@ -253,6 +289,8 @@ export default function App() {
           imageUrl={result.generatedUrl}
           onCancel={closeModal}
           onSend={handleSend}
+          canPrint={!!printer}
+          onPrint={print}
         />
       )}
 

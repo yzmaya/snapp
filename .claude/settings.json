@@ -29,7 +29,14 @@
       "Bash(git commit *)",
       "Bash(echo \"push exit=$?\")",
       "Bash(gh run *)",
-      "Bash(echo \"watch exit=$?\")"
+      "Bash(echo \"watch exit=$?\")",
+      "Bash(node -e 'const r=await fetch\\(\"https://yzmaya.github.io/snapp/\"\\);const t=await r.text\\(\\);const m=t.match\\(/assets\\\\/\\(index-[^\"]+\\\\.js\\)/\\);console.log\\(\"bundle en vivo:\", m?m[1]:\"?\"\\)')",
+      "Bash(lpstat -p)",
+      "Bash(node print-helper/server.mjs)",
+      "Bash(curl -s http://localhost:47801/status)",
+      "Bash(lpoptions -p Canon_SELPHY_CP1500)",
+      "Bash(chmod +x print-helper/start.command)",
+      "Bash(echo \"push=$?\")"
     ]
   }
 }

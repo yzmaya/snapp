@@ -9,11 +9,31 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  *  - onCancel(): cierra y vuelve a la cámara.
  *  - onSend(form): envía el correo (Promise). Debe lanzar en caso de error.
  */
-export default function ResultModal({ imageUrl, onCancel, onSend }) {
+export default function ResultModal({
+  imageUrl,
+  onCancel,
+  onSend,
+  canPrint = false,
+  onPrint,
+}) {
   const [view, setView] = useState('result') // result | form | sent
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [printState, setPrintState] = useState('idle') // idle | printing | done | error
+  const [printMsg, setPrintMsg] = useState('')
+
+  const handlePrint = async () => {
+    setPrintState('printing')
+    setPrintMsg('')
+    try {
+      await onPrint(imageUrl)
+      setPrintState('done')
+    } catch (err) {
+      setPrintState('error')
+      setPrintMsg(err?.message || 'No se pudo imprimir.')
+    }
+  }
 
   const backdropRef = useRef(null)
   const cardRef = useRef(null)
@@ -94,7 +114,29 @@ export default function ResultModal({ imageUrl, onCancel, onSend }) {
             <div className="modal__img" style={{ marginTop: 16 }}>
               <img src={imageUrl} alt="Tu versión LEGO" />
             </div>
-            <div className="actions" style={{ marginTop: 18 }}>
+
+            {/* Botón Imprimir: solo si la SELPHY está conectada (helper local) */}
+            {canPrint && (
+              <button
+                className="btn btn--print"
+                style={{ marginTop: 16, width: '100%' }}
+                onClick={handlePrint}
+                disabled={printState === 'printing' || printState === 'done'}
+              >
+                {printState === 'printing'
+                  ? 'Enviando a impresión…'
+                  : printState === 'done'
+                    ? '✓ Enviada a la impresora'
+                    : '🖨️ Imprimir'}
+              </button>
+            )}
+            {printState === 'error' && (
+              <p className="form__error" style={{ marginTop: 10 }}>
+                {printMsg}
+              </p>
+            )}
+
+            <div className="actions" style={{ marginTop: 16 }}>
               <button className="btn btn--danger btn--lg" onClick={handleCancel}>
                 Cancelar
               </button>

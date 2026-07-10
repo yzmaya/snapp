@@ -317,6 +317,16 @@ body {
 .btn--ghost:hover:not(:disabled) {
   background: rgba(122, 166, 245, 0.2);
 }
+.btn--print {
+  background: rgba(122, 166, 245, 0.14);
+  color: var(--ink-100);
+  border: 1px solid rgba(122, 166, 245, 0.4);
+  padding: 16px 22px;
+  font-size: 17px;
+}
+.btn--print:hover:not(:disabled) {
+  background: rgba(122, 166, 245, 0.24);
+}
 .btn--danger {
   background: rgba(226, 84, 79, 0.14);
   color: #ffb4b1;
@@ -335,6 +345,33 @@ body {
   font-size: 22px;
   padding: 22px 44px;
   border-radius: 999px;
+}
+
+/* ---------- Checkbox aviso de privacidad ---------- */
+.privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  color: var(--ink-300);
+  font-size: 14px;
+  line-height: 1.45;
+  cursor: pointer;
+  user-select: none;
+}
+.privacy input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  accent-color: var(--blue-500);
+  cursor: pointer;
+}
+.privacy a {
+  color: var(--blue-300);
+  font-weight: 700;
 }
 
 /* ---------- Modal ---------- */
