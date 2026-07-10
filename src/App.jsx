@@ -13,7 +13,18 @@ import { supabase } from './lib/supabase.js'
 // 'generating'→ generando LEGO con IA
 // 'result'    → modal con la foto LEGO
 export default function App() {
-  const { videoRef, ready, error, start, capture } = useCamera({ mirror: true })
+  const { videoRef, ready, error, info, start, capture } = useCamera({
+    mirror: true,
+  })
+
+  // ?debug=1 muestra resolución/fps reales de la cámara (útil en equipos lentos)
+  const showDiag = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get('debug') === '1'
+    } catch {
+      return false
+    }
+  })()
 
   const [phase, setPhase] = useState('live')
   const [captured, setCaptured] = useState(null) // { blob, dataUrl }
@@ -162,6 +173,14 @@ export default function App() {
           {/* Countdown */}
           {phase === 'counting' && (
             <Countdown from={3} onDone={handleShoot} />
+          )}
+
+          {/* Diagnóstico de cámara (?debug=1) */}
+          {showDiag && info && (
+            <div className="diag">
+              {info.width}×{info.height} · {info.frameRate ?? '?'}fps ·{' '}
+              {info.lowPower ? 'low-power' : 'normal'}
+            </div>
           )}
 
           {/* Flash */}
