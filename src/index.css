@@ -388,6 +388,8 @@ body {
 .modal {
   width: 100%;
   max-width: 460px;
+  max-height: calc(100dvh - 32px); /* nunca más alto que la pantalla */
+  overflow-y: auto; /* si no cabe, permite scroll dentro del modal */
   background: linear-gradient(180deg, var(--navy-700), var(--navy-800));
   border: 1px solid rgba(122, 166, 245, 0.22);
   border-radius: var(--radius-lg);
@@ -395,7 +397,7 @@ body {
   padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 .modal__title {
   font-weight: 900;
@@ -414,6 +416,8 @@ body {
   border-radius: var(--radius-md);
   overflow: hidden;
   aspect-ratio: 3 / 4;
+  max-height: 46vh; /* deja espacio para los botones sin cortar el modal */
+  margin: 0 auto;
   background: #05122e;
   box-shadow: var(--shadow-soft);
 }
@@ -518,5 +522,33 @@ body {
 @media (max-width: 420px) {
   .btn--smile {
     width: 100%;
+  }
+}
+
+/* ---------- Pantallas grandes / verticales (kiosco) ---------- */
+/* Aprovechar el máximo ancho para la cámara */
+@media (min-width: 820px) {
+  .brand,
+  .stage {
+    max-width: 820px;
+  }
+}
+@media (min-width: 800px) and (orientation: portrait) {
+  .brand,
+  .stage {
+    max-width: 94vw;
+  }
+  .frame {
+    max-height: 80vh; /* deja crecer la cámara a lo ancho en vertical */
+  }
+  .wordmark {
+    font-size: 32px;
+  }
+  .tagline {
+    font-size: 26px;
+  }
+  .btn--smile {
+    font-size: 26px;
+    padding: 26px 56px;
   }
 }

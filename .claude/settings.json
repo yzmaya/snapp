@@ -36,7 +36,8 @@
       "Bash(curl -s http://localhost:47801/status)",
       "Bash(lpoptions -p Canon_SELPHY_CP1500)",
       "Bash(chmod +x print-helper/start.command)",
-      "Bash(echo \"push=$?\")"
+      "Bash(echo \"push=$?\")",
+      "Bash(git commit -q -m 'UI: modal scrolleable \\(no corta botones\\) + cámara a ancho máximo en pantallas verticales grandes *)"
     ]
   }
 }
