@@ -1,0 +1,15 @@
+project_id = "dhvyjgzxfsqaminxquuf"
+
+[auth]
+enabled = true
+site_url = "https://yzmaya.github.io/snapp/"
+additional_redirect_urls = [
+  "https://yzmaya.github.io/snapp/",
+  "https://yzmaya.github.io/snapp/**",
+  "http://localhost:5180/",
+  "http://localhost:5180/**",
+]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false

@@ -37,7 +37,9 @@
       "Bash(lpoptions -p Canon_SELPHY_CP1500)",
       "Bash(chmod +x print-helper/start.command)",
       "Bash(echo \"push=$?\")",
-      "Bash(git commit -q -m 'UI: modal scrolleable \\(no corta botones\\) + cámara a ancho máximo en pantallas verticales grandes *)"
+      "Bash(git commit -q -m 'UI: modal scrolleable \\(no corta botones\\) + cámara a ancho máximo en pantallas verticales grandes *)",
+      "Bash(node -e 'const d=JSON.parse\\(require\\(\"fs\"\\).readFileSync\\(0\\)\\); if\\(d.message\\){console.log\\(\"ERROR:\",d.message\\)} else {console.log\\(Object.keys\\(d\\).filter\\(k=>/site|uri|otp|magic|mailer_temp|email_enabled/i.test\\(k\\)\\).join\\(\"\\\\n\"\\)\\)}')",
+      "Bash(supabase config *)"
     ]
   }
 }

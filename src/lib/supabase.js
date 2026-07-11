@@ -11,5 +11,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false },
+  auth: {
+    persistSession: true, // guarda la sesión del admin
+    autoRefreshToken: true,
+    detectSessionInUrl: true, // procesa el ?code= del enlace mágico
+    flowType: 'pkce',
+  },
 })
