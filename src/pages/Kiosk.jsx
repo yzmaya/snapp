@@ -29,6 +29,8 @@ export default function Kiosk() {
   const [toast, setToast] = useState('')
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [projectTitle, setProjectTitle] = useState('')
+  const [variants, setVariants] = useState([])
+  const [variantId, setVariantId] = useState(null)
 
   const flashRef = useRef(null)
 
@@ -47,6 +49,19 @@ export default function Kiosk() {
       })
   }, [])
 
+  // Estilos del proyecto activo (opcionales, configurables desde admin)
+  useEffect(() => {
+    supabase
+      .from('v_active_variants')
+      .select('id, label, example_path')
+      .then(({ data }) => setVariants(data || []))
+  }, [])
+
+  const exampleUrl = (path) =>
+    path ? supabase.storage.from('examples').getPublicUrl(path).data.publicUrl : null
+
+  const needsVariant = variants.length > 0
+
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 5000)
@@ -54,6 +69,10 @@ export default function Kiosk() {
 
   const handleSmile = () => {
     if (!ready) return
+    if (needsVariant && !variantId) {
+      showToast('Elige primero un estilo.')
+      return
+    }
     setPhase('counting')
   }
 
@@ -89,7 +108,11 @@ export default function Kiosk() {
     setPhase('generating')
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-lego', {
-        body: { imageBase64: captured.dataUrl, capturedAt: captured.capturedAt },
+        body: {
+          imageBase64: captured.dataUrl,
+          capturedAt: captured.capturedAt,
+          variantId: variantId || undefined,
+        },
       })
       if (fnError) throw fnError
       if (!data?.generatedUrl) throw new Error('La IA no devolvió imagen.')
@@ -193,12 +216,36 @@ export default function Kiosk() {
           )}
         </div>
 
+        {phase === 'live' && needsVariant && (
+          <div className="styles">
+            <p className="styles__title">Elige cómo quieres verte</p>
+            <div className="styles__grid">
+              {variants.map((v) => {
+                const url = exampleUrl(v.example_path)
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className={`style-card ${v.id === variantId ? 'is-selected' : ''}`}
+                    onClick={() => setVariantId(v.id)}
+                  >
+                    <div className="style-card__img" data-empty={!url}>
+                      {url ? <img src={url} alt={v.label} /> : <span>Ejemplo</span>}
+                    </div>
+                    <span className="style-card__label">{v.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {phase === 'live' && (
           <div className="actions">
             <button
               className="btn btn--primary btn--smile"
               onClick={handleSmile}
-              disabled={!ready}
+              disabled={!ready || (needsVariant && !variantId)}
             >
               ¡Sonríe! 📸
             </button>

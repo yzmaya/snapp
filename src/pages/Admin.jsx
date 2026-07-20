@@ -131,10 +131,13 @@ const empty = {
   logo_color_path: null,
 }
 
+const MAX_VARIANTS = 3
+
 function Dashboard({ session }) {
   const [projects, setProjects] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [form, setForm] = useState(empty)
+  const [variants, setVariants] = useState([])
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -151,9 +154,31 @@ function Dashboard({ session }) {
     setSelectedId((prev) => prev || data?.find((p) => p.is_active)?.id || data?.[0]?.id || null)
   }, [])
 
+  const loadVariants = useCallback(async (projectId) => {
+    if (!projectId) {
+      setVariants([])
+      return
+    }
+    const { data, error } = await supabase
+      .from('project_variants')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('position', { ascending: true })
+      .order('created_at', { ascending: true })
+    if (error) {
+      setMsg('Error cargando estilos: ' + error.message)
+      return
+    }
+    setVariants(data || [])
+  }, [])
+
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    loadVariants(selectedId)
+  }, [selectedId, loadVariants])
 
   // Al cambiar de proyecto seleccionado, carga sus campos
   useEffect(() => {
@@ -257,6 +282,78 @@ function Dashboard({ session }) {
 
   const logoUrl = (path) =>
     path ? supabase.storage.from('logos').getPublicUrl(path).data.publicUrl : null
+
+  const exampleUrl = (path) =>
+    path ? supabase.storage.from('examples').getPublicUrl(path).data.publicUrl : null
+
+  // ---- Estilos (variantes) ----
+  const addVariant = async () => {
+    if (!selectedId) return
+    if (variants.length >= MAX_VARIANTS)
+      return flash(`Máximo ${MAX_VARIANTS} estilos por proyecto`)
+    const { error } = await supabase.from('project_variants').insert({
+      project_id: selectedId,
+      position: variants.length,
+      label: `Opción ${variants.length + 1}`,
+      prompt:
+        'Toma la imagen de referencia y adáptala para que la persona (o personas) ' +
+        'de la foto aparezca dentro de esa escena de forma realista, conservando sus ' +
+        'rasgos, rostro y peinado.',
+    })
+    if (error) return flash('Error: ' + error.message)
+    await loadVariants(selectedId)
+    flash('Estilo agregado')
+  }
+
+  // Edición local (se persiste con "Guardar estilo")
+  const patchVariant = (id, patch) =>
+    setVariants((vs) => vs.map((v) => (v.id === id ? { ...v, ...patch } : v)))
+
+  const saveVariant = async (v) => {
+    const { error } = await supabase
+      .from('project_variants')
+      .update({ label: v.label.trim() || 'Opción', prompt: v.prompt })
+      .eq('id', v.id)
+    if (error) return flash('Error al guardar estilo: ' + error.message)
+    flash('Estilo guardado ✓')
+  }
+
+  const removeVariant = async (v) => {
+    if (!confirm(`¿Eliminar el estilo "${v.label}"?`)) return
+    if (v.example_path) await supabase.storage.from('examples').remove([v.example_path])
+    const { error } = await supabase.from('project_variants').delete().eq('id', v.id)
+    if (error) return flash('Error: ' + error.message)
+    await loadVariants(selectedId)
+    flash('Estilo eliminado')
+  }
+
+  const uploadExample = async (v, file) => {
+    if (!file) return
+    const ext = file.name.split('.').pop()
+    const path = `${selectedId}/${v.id}.${ext}`
+    const { error: upErr } = await supabase.storage
+      .from('examples')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) return flash('Error subiendo ejemplo: ' + upErr.message)
+    const { error } = await supabase
+      .from('project_variants')
+      .update({ example_path: path })
+      .eq('id', v.id)
+    if (error) return flash('Error: ' + error.message)
+    await loadVariants(selectedId)
+    flash('Imagen de ejemplo actualizada ✓')
+  }
+
+  const deleteExample = async (v) => {
+    if (v.example_path) await supabase.storage.from('examples').remove([v.example_path])
+    const { error } = await supabase
+      .from('project_variants')
+      .update({ example_path: null })
+      .eq('id', v.id)
+    if (error) return flash('Error: ' + error.message)
+    await loadVariants(selectedId)
+    flash('Imagen de ejemplo eliminada')
+  }
 
   return (
     <div className="admin">
@@ -370,6 +467,47 @@ function Dashboard({ session }) {
                 />
               </div>
 
+              <div className="variants">
+                <div className="admin-card__head" style={{ marginTop: 20 }}>
+                  <h2 style={{ fontSize: 16 }}>Estilos (opciones de resultado)</h2>
+                  <button
+                    className="btn btn--primary btn--sm"
+                    onClick={addVariant}
+                    disabled={variants.length >= MAX_VARIANTS}
+                  >
+                    + Estilo
+                  </button>
+                </div>
+                <p className="admin-hint" style={{ marginTop: 0, marginBottom: 12 }}>
+                  Agrega de 1 a {MAX_VARIANTS} estilos con su imagen de ejemplo y su
+                  propio prompt. El invitado elige uno antes de tomarse la foto. La
+                  imagen de ejemplo se envía a la IA como <strong>referencia</strong> del
+                  resultado, así que redacta el prompt en ese sentido (p. ej. «Toma la
+                  imagen de referencia y adáptala para que la persona de la foto aparezca
+                  ahí, conservando sus rasgos»). Sin estilos, el proyecto usa el prompt de
+                  arriba (comportamiento normal).
+                </p>
+                {variants.length === 0 ? (
+                  <p className="admin-muted">Este proyecto no tiene estilos (usa el prompt general).</p>
+                ) : (
+                  <div className="variant-grid">
+                    {variants.map((v, i) => (
+                      <VariantCard
+                        key={v.id}
+                        index={i}
+                        variant={v}
+                        exampleUrl={exampleUrl(v.example_path)}
+                        onChange={(patch) => patchVariant(v.id, patch)}
+                        onSave={() => saveVariant(v)}
+                        onDelete={() => removeVariant(v)}
+                        onUpload={(f) => uploadExample(v, f)}
+                        onDeleteImage={() => deleteExample(v)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="admin-actions">
                 <button
                   className="btn btn--danger"
@@ -387,6 +525,64 @@ function Dashboard({ session }) {
       </div>
 
       {msg && <div className="toast">{msg}</div>}
+    </div>
+  )
+}
+
+function VariantCard({ index, variant, exampleUrl, onChange, onSave, onDelete, onUpload, onDeleteImage }) {
+  return (
+    <div className="variant-card">
+      <div className="variant-card__preview" data-empty={!exampleUrl}>
+        {exampleUrl ? (
+          <img src={exampleUrl} alt={variant.label} />
+        ) : (
+          <span>Imagen de ejemplo del resultado</span>
+        )}
+      </div>
+      <div className="logo-slot__actions">
+        <label className="btn btn--ghost btn--sm">
+          {exampleUrl ? 'Cambiar imagen' : 'Subir imagen'}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            style={{ display: 'none' }}
+            onChange={(e) => e.target.files[0] && onUpload(e.target.files[0])}
+          />
+        </label>
+        {exampleUrl && (
+          <button className="btn btn--danger btn--sm" onClick={onDeleteImage}>
+            Quitar
+          </button>
+        )}
+      </div>
+
+      <div className="field">
+        <label>Nombre del estilo (lo ve el invitado)</label>
+        <input
+          type="text"
+          value={variant.label}
+          placeholder={`Opción ${index + 1}`}
+          onChange={(e) => onChange({ label: e.target.value })}
+        />
+      </div>
+
+      <div className="field">
+        <label>Prompt de este estilo</label>
+        <textarea
+          rows={4}
+          value={variant.prompt}
+          onChange={(e) => onChange({ prompt: e.target.value })}
+        />
+      </div>
+
+      <div className="variant-card__actions">
+        <button className="btn btn--danger btn--sm" onClick={onDelete}>
+          Eliminar estilo
+        </button>
+        <button className="btn btn--primary btn--sm" onClick={onSave}>
+          Guardar estilo
+        </button>
+      </div>
     </div>
   )
 }

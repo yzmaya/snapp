@@ -40,6 +40,14 @@ const LOGO_INSTRUCTION =
   'en blanco del logo si esa zona queda con fondo oscuro, o la versión a color si el ' +
   'fondo es claro.'
 
+const REFERENCE_INSTRUCTION =
+  ' Te proporciono también una imagen de REFERENCIA del resultado deseado. Usa esa ' +
+  'referencia como guía de estilo, escena, personajes, vestuario, iluminación y ' +
+  'composición, y genera una imagen que se parezca lo más posible a ella, pero ' +
+  'integrando de forma realista a la persona (o personas) de la FOTO real, ' +
+  'conservando fielmente su rostro, rasgos, tono de piel y peinado para que sea ' +
+  'reconocible.'
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -105,6 +113,7 @@ type GenCfg = {
   backend: 'aistudio' | 'vertex'
   model: string
   logos: Img[] // 0..2 logos a incluir en la consulta
+  references: Img[] // 0..N imágenes de ejemplo del estilo elegido
 }
 
 function resolveModel(modelKey: string): { backend: 'aistudio' | 'vertex'; model: string } {
@@ -131,12 +140,19 @@ function extractGeminiImage(data: any): Img {
 }
 
 function geminiBody(cfg: GenCfg, photo: Img) {
-  const parts: any[] = [
-    { text: cfg.prompt },
-    { inline_data: { mime_type: photo.mime, data: bytesToBase64(photo.bytes) } },
-  ]
-  for (const logo of cfg.logos)
-    parts.push({ inline_data: { mime_type: logo.mime, data: bytesToBase64(logo.bytes) } })
+  const inline = (img: Img) => ({
+    inline_data: { mime_type: img.mime, data: bytesToBase64(img.bytes) },
+  })
+  const parts: any[] = [{ text: cfg.prompt }]
+  if (cfg.references.length) {
+    // Con referencia: etiquetamos cada imagen para que el modelo sepa su rol.
+    parts.push({ text: 'FOTO real de la persona:' }, inline(photo))
+    for (const ref of cfg.references)
+      parts.push({ text: 'Imagen de REFERENCIA del resultado deseado:' }, inline(ref))
+  } else {
+    parts.push(inline(photo))
+  }
+  for (const logo of cfg.logos) parts.push(inline(logo))
   return {
     contents: [{ parts }],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
@@ -225,7 +241,15 @@ async function genOpenAI(cfg: GenCfg, photo: Img, signal: AbortSignal): Promise<
   form.append('size', '1024x1536')
   form.append('n', '1')
   form.append('input_fidelity', 'high')
-  form.append('image', new Blob([photo.bytes], { type: photo.mime }), `photo.${extFromMime(photo.mime)}`)
+  if (cfg.references.length) {
+    // gpt-image-1 acepta varias imágenes: foto primero, luego referencia(s).
+    form.append('image[]', new Blob([photo.bytes], { type: photo.mime }), `photo.${extFromMime(photo.mime)}`)
+    cfg.references.forEach((ref, i) =>
+      form.append('image[]', new Blob([ref.bytes], { type: ref.mime }), `ref${i}.${extFromMime(ref.mime)}`),
+    )
+  } else {
+    form.append('image', new Blob([photo.bytes], { type: photo.mime }), `photo.${extFromMime(photo.mime)}`)
+  }
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
@@ -278,7 +302,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE)
 
   try {
-    const { imageBase64, debug, capturedAt } = await req.json()
+    const { imageBase64, debug, capturedAt, variantId } = await req.json()
     if (!imageBase64 || typeof imageBase64 !== 'string')
       return json({ error: 'Falta imageBase64.' }, 400)
 
@@ -291,6 +315,31 @@ Deno.serve(async (req) => {
 
     const modelSel = resolveModel(project?.model_key ?? 'nano-banana-2')
     let prompt = project?.prompt || DEFAULT_PROMPT
+
+    // ---- Estilo elegido (variante) ----
+    // Si el kiosko envía un variantId del proyecto activo, su prompt manda y
+    // su imagen de ejemplo se envía a la IA como REFERENCIA del resultado.
+    const references: Img[] = []
+    let variant: { id: string; label: string } | null = null
+    if (variantId && typeof variantId === 'string' && project?.id) {
+      const { data: v } = await supabase
+        .from('project_variants')
+        .select('id, label, prompt, example_path, project_id')
+        .eq('id', variantId)
+        .maybeSingle()
+      if (v && v.project_id === project.id) {
+        if (v.prompt?.trim()) prompt = v.prompt
+        variant = { id: v.id, label: v.label }
+        if (v.example_path) {
+          const dl = await supabase.storage.from('examples').download(v.example_path)
+          if (dl.data) {
+            const buf = new Uint8Array(await dl.data.arrayBuffer())
+            references.push({ bytes: buf, mime: dl.data.type || 'image/png' })
+          }
+        }
+      }
+    }
+    if (references.length) prompt += REFERENCE_INSTRUCTION
 
     // ---- Logos (si el proyecto los usa) ----
     const logos: Img[] = []
@@ -306,7 +355,7 @@ Deno.serve(async (req) => {
       if (logos.length) prompt += LOGO_INSTRUCTION
     }
 
-    const cfg: GenCfg = { prompt, backend: modelSel.backend, model: modelSel.model, logos }
+    const cfg: GenCfg = { prompt, backend: modelSel.backend, model: modelSel.model, logos, references }
 
     // 1) Subir original
     const original = decodeDataUrl(imageBase64)
@@ -355,6 +404,8 @@ Deno.serve(async (req) => {
         event_name: project?.title ?? 'demo',
         project_id: project?.id ?? null,
         project_title: project?.title ?? null,
+        variant_id: variant?.id ?? null,
+        variant_label: variant?.label ?? null,
         status: 'generated',
       })
       .select('id')
