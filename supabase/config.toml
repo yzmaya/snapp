@@ -8,6 +8,11 @@ additional_redirect_urls = [
   "https://yzmaya.github.io/snapp/**",
   "http://localhost:5180/",
   "http://localhost:5180/**",
+  # Fork snapp-mobile (mismo backend)
+  "https://yzmaya.github.io/snapp-mobile/",
+  "https://yzmaya.github.io/snapp-mobile/**",
+  "http://localhost:5181/",
+  "http://localhost:5181/**",
 ]
 
 [auth.email]
