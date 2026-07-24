@@ -1,18 +1,28 @@
 // ============================================================
-// SNAPP · Helper local de impresión para Canon SELPHY (macOS/CUPS)
+// SNAPP · Helper local de impresión para Canon SELPHY
 // ------------------------------------------------------------
-// Pequeño servidor HTTP (sin dependencias) que corre en la Mac del
-// evento. Detecta la impresora SELPHY vía CUPS e imprime la foto.
+// Pequeño servidor HTTP (sin dependencias) que corre en la
+// computadora del evento (Windows, macOS o Linux). Detecta la
+// impresora SELPHY y le envía la foto.
+//
+//   Windows      → PowerShell (Get-CimInstance Win32_Printer) + mspaint /pt
+//   macOS/Linux  → CUPS (lpstat / lp)
 //
 // Endpoints:
-//   GET  /status  → { connected: bool, printer: string|null, detail }
+//   GET  /status  → { connected, printer, detail }
+//   GET  /diag    → diagnóstico completo (plataforma, colas, estado, …)
 //   POST /print   → body { imageUrl } | { imageBase64 }  → imprime
 //
 // Uso:   node print-helper/server.mjs
+//        (Windows: doble clic en start-windows.bat)
+//        (macOS:   doble clic en start.command)
+//
 // Config (opcional, por variables de entorno):
 //   PORT            (default 47801)
 //   SELPHY_MATCH    substring del nombre de impresora (default "selphy")
-//   PRINT_OPTIONS   opciones de lp separadas por coma (default "fit-to-page")
+//   PRINT_OPTIONS   opciones de lp separadas por coma (default "fit-to-page", solo POSIX)
+//   PRINT_CMD_WIN   comando de impresión en Windows (default "mspaint /pt");
+//                   plantilla con {file} y {printer}
 //   ALLOW_ORIGIN    CORS (default "*")
 // ============================================================
 import { createServer } from 'node:http'
@@ -25,12 +35,17 @@ import { randomUUID } from 'node:crypto'
 
 const execp = promisify(exec)
 
+const VERSION = '1.1.0'
+const IS_WIN = process.platform === 'win32'
 const PORT = Number(process.env.PORT || 47801)
 const MATCH = (process.env.SELPHY_MATCH || 'selphy').toLowerCase()
 const PRINT_OPTIONS = (process.env.PRINT_OPTIONS || 'fit-to-page')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
+// Plantilla de impresión en Windows. mspaint /pt "<archivo>" "<impresora>"
+// imprime la imagen de forma silenciosa usando los ajustes por defecto de la cola.
+const PRINT_CMD_WIN = process.env.PRINT_CMD_WIN || 'mspaint /pt "{file}" "{printer}"'
 const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || '*'
 
 function setCors(res) {
@@ -44,37 +59,117 @@ function sendJson(res, code, obj) {
   res.end(JSON.stringify(obj))
 }
 
-// Busca la impresora SELPHY en CUPS y evalúa si está lista.
-// Robusto a idioma: lpstat -e da solo nombres; el estado se evalúa detectando
-// SOLO estados problemáticos (en inglés y español). "idle/inactiva" = lista.
+// ------------------------------------------------------------
+// Detección de impresoras (multiplataforma)
+// ------------------------------------------------------------
+
+// Estados problemáticos en CUPS (inglés y español). "idle/inactiva" = lista.
 const BAD_STATE =
   /(disabled|stopped|paused|rejecting|not connected|offline|unplugged|desactivada|detenida|pausada|no conectada|sin conexión|rechaz)/i
 
+// Devuelve TODAS las colas: [{ name, ready, detail }]
+async function listPrinters() {
+  return IS_WIN ? listPrintersWindows() : listPrintersCups()
+}
+
+async function listPrintersCups() {
+  // 1) Nombres de las colas (independiente de idioma)
+  const { stdout: names } = await execp('lpstat -e 2>/dev/null')
+  const list = []
+  for (const raw of names.split('\n')) {
+    const name = raw.trim()
+    if (!name) continue
+    let detail = ''
+    let ready = true
+    try {
+      const { stdout: st } = await execp(`lpstat -p ${name} 2>/dev/null`)
+      detail = st.split('\n')[0].trim()
+      ready = !BAD_STATE.test(st)
+    } catch {
+      ready = false
+    }
+    list.push({ name, ready, detail })
+  }
+  return list
+}
+
+async function listPrintersWindows() {
+  // Get-CimInstance devuelve WorkOffline (bool) y PrinterStatus (int).
+  const ps =
+    'Get-CimInstance Win32_Printer | ' +
+    'Select-Object Name,WorkOffline,PrinterStatus | ConvertTo-Json -Compress'
+  const cmd = `powershell -NoProfile -NonInteractive -Command "${ps}"`
+  const { stdout } = await execp(cmd, { windowsHide: true })
+  const parsed = JSON.parse(stdout.trim() || 'null')
+  const rows = Array.isArray(parsed) ? parsed : parsed ? [parsed] : []
+  return rows
+    .filter((r) => r && r.Name)
+    .map((r) => {
+      const offline = r.WorkOffline === true
+      return {
+        name: String(r.Name),
+        ready: !offline,
+        detail: offline ? 'Sin conexión (offline)' : 'Lista',
+      }
+    })
+}
+
+// La cola SELPHY (primera cuyo nombre contiene MATCH), o null.
 async function findPrinter() {
   try {
-    // 1) Nombre de la cola (independiente de idioma)
-    const { stdout: names } = await execp('lpstat -e 2>/dev/null')
-    const name = names
-      .split('\n')
-      .map((s) => s.trim())
-      .find((n) => n && n.toLowerCase().includes(MATCH))
-    if (!name) return null
-
-    // 2) Estado de esa cola (idle/printing = ok; solo descartamos estados malos)
-    const { stdout: st } = await execp(`lpstat -p ${name} 2>/dev/null`)
-    const ready = !BAD_STATE.test(st)
-    return { name, ready, detail: st.split('\n')[0].trim() }
+    const all = await listPrinters()
+    return all.find((p) => p.name.toLowerCase().includes(MATCH)) ?? null
   } catch {
     return null
   }
 }
 
+// ------------------------------------------------------------
+// Impresión (multiplataforma)
+// ------------------------------------------------------------
+async function printImage(printer, file) {
+  if (IS_WIN) {
+    const cmd = PRINT_CMD_WIN.replaceAll('{file}', file).replaceAll('{printer}', printer.name)
+    const { stdout } = await execp(cmd, { windowsHide: true })
+    return stdout.trim()
+  }
+  const opts = PRINT_OPTIONS.map((o) => `-o ${o}`).join(' ')
+  const { stdout } = await execp(`lp -d ${printer.name} ${opts} "${file}"`)
+  return stdout.trim()
+}
+
+// ------------------------------------------------------------
+// Handlers
+// ------------------------------------------------------------
 async function handleStatus(res) {
   const p = await findPrinter()
   sendJson(res, 200, {
     connected: !!(p && p.ready),
     printer: p?.name ?? null,
     detail: p?.detail ?? null,
+  })
+}
+
+async function handleDiag(res) {
+  let printers = []
+  let toolAvailable = true
+  try {
+    printers = await listPrinters()
+  } catch (e) {
+    toolAvailable = false
+    printers = []
+  }
+  const matched = printers.find((p) => p.name.toLowerCase().includes(MATCH)) ?? null
+  sendJson(res, 200, {
+    platform: process.platform,
+    tool: IS_WIN ? 'powershell' : 'cups',
+    toolAvailable,
+    match: MATCH,
+    printers,
+    matched,
+    connected: !!(matched && matched.ready),
+    port: PORT,
+    version: VERSION,
   })
 }
 
@@ -121,10 +216,8 @@ async function handlePrint(req, res) {
   const file = join(tmpdir(), `snapp-${randomUUID()}.png`)
   try {
     await writeFile(file, bytes)
-    const opts = PRINT_OPTIONS.map((o) => `-o ${o}`).join(' ')
-    const cmd = `lp -d ${printer.name} ${opts} "${file}"`
-    const { stdout } = await execp(cmd)
-    sendJson(res, 200, { ok: true, printer: printer.name, message: stdout.trim() })
+    const message = await printImage(printer, file)
+    sendJson(res, 200, { ok: true, printer: printer.name, message })
   } catch (e) {
     sendJson(res, 500, { error: 'Falló la impresión: ' + (e.message || e) })
   } finally {
@@ -140,11 +233,12 @@ const server = createServer(async (req, res) => {
   }
   try {
     if (req.method === 'GET' && req.url === '/status') return handleStatus(res)
+    if (req.method === 'GET' && req.url === '/diag') return handleDiag(res)
     if (req.method === 'POST' && req.url === '/print') return handlePrint(req, res)
     if (req.method === 'GET' && req.url === '/') {
       setCors(res)
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
-      return res.end('SNAPP print helper activo. Endpoints: /status, /print')
+      return res.end('SNAPP print helper activo. Endpoints: /status, /diag, /print')
     }
     sendJson(res, 404, { error: 'No encontrado' })
   } catch (e) {
@@ -153,11 +247,16 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`🖨️  SNAPP print helper escuchando en http://localhost:${PORT}`)
+  console.log(`🖨️  SNAPP print helper v${VERSION} escuchando en http://localhost:${PORT}`)
+  console.log(`    Plataforma: ${process.platform} · Herramienta: ${IS_WIN ? 'PowerShell' : 'CUPS'}`)
   console.log(`    Buscando impresora que contenga: "${MATCH}"`)
-  findPrinter().then((p) =>
-    console.log(
-      p ? `    ✅ Detectada: ${p.name} (${p.ready ? 'lista' : 'no lista'})` : '    ⚠️  Aún no detecto la SELPHY (conéctala y recarga /status)',
-    ),
+  findPrinter().then(
+    (p) =>
+      console.log(
+        p
+          ? `    ✅ Detectada: ${p.name} (${p.ready ? 'lista' : 'no lista'})`
+          : `    ⚠️  Aún no detecto la SELPHY. Abre /diag para ver las impresoras disponibles.`,
+      ),
+    (e) => console.log(`    ⚠️  No pude listar impresoras: ${e?.message ?? e}`),
   )
 })

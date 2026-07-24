@@ -1,11 +1,16 @@
 # SNAPP · Helper local de impresión (Canon SELPHY)
 
-Pequeño servicio que corre en la **Mac del evento** para que la app web pueda
-detectar la impresora **Canon SELPHY** e imprimir la foto con un clic.
+Pequeño servicio que corre en la **computadora del evento** para que la app web
+pueda detectar la impresora **Canon SELPHY** e imprimir la foto con un clic.
 
-No tiene dependencias (solo Node.js, que ya tienes instalado).
+Funciona en **Windows** (PowerShell + `mspaint`), **macOS** y **Linux** (CUPS).
+No tiene dependencias: solo necesita **Node.js instalado**.
 
 ## Arrancar
+
+**Windows:** doble clic en **`start-windows.bat`** (te avisa si falta Node.js).
+
+**macOS:** doble clic en **`start.command`**, o en terminal:
 
 ```bash
 node print-helper/server.mjs
@@ -14,24 +19,55 @@ node print-helper/server.mjs
 Verás algo como:
 
 ```
-🖨️  SNAPP print helper escuchando en http://localhost:47801
-    ✅ Detectada: Canon_SELPHY_CP1500 (lista)
+🖨️  SNAPP print helper v1.1.0 escuchando en http://localhost:47801
+    Plataforma: win32 · Herramienta: PowerShell
+    Buscando impresora que contenga: "selphy"
+    ✅ Detectada: Canon SELPHY CP1500 (lista)
 ```
 
-> En Mac también puedes hacer doble clic en **`start.command`** (dentro de esta carpeta).
+## Diagnóstico rápido
+
+Abre en **Chrome** la pantalla de diagnóstico de la app:
+
+```
+https://<tu-app>/#/impresora      (o  http://localhost:5180/#/impresora  en local)
+```
+
+Muestra un checklist en vivo: si el helper responde, el sistema/herramienta, si
+la SELPHY fue detectada, su estado, y **todas** las impresoras encontradas (útil
+si el nombre no coincide con «selphy»). Incluye un botón para **imprimir una
+página de prueba**.
 
 ## Cómo lo usa la app
 
 - La app consulta `http://localhost:47801/status`. Si la SELPHY está conectada,
   muestra el botón **Imprimir** en el modal de resultado.
-- Al imprimir, la app envía la URL de la foto a `http://localhost:47801/print`,
-  y el helper la manda a la impresora con `lp`.
+- Al imprimir, la app envía la imagen a `http://localhost:47801/print`, y el
+  helper la manda a la impresora (Windows: `mspaint /pt` · macOS/Linux: `lp`).
 
 ## Importante (navegador)
 
 La app publicada corre en **HTTPS** (GitHub Pages) y llama a `http://localhost`.
-Chrome permite esto (considera `localhost` seguro); **usa Chrome** para el kiosco.
-Safari puede bloquearlo — si usas Safari, abre la app localmente por `http://`.
+Chrome lo permite (considera `localhost` seguro); **usa Chrome** para el kiosco.
+Safari puede bloquearlo.
+
+## Solución de problemas
+
+| Síntoma en `#/impresora` | Causa probable | Solución |
+|---|---|---|
+| «Helper no accesible» | El helper no está corriendo o no es Chrome | Arranca `start-windows.bat`; usa Chrome; verifica Node.js (`node -v`) |
+| Herramienta no disponible | PowerShell no responde (Windows) | Verifica que PowerShell funcione en esa PC |
+| SELPHY no detectada | El nombre de la cola no contiene «selphy» | Renombra la impresora, o arranca con `SELPHY_MATCH` (ver abajo) |
+| Detectada pero «no lista» | Impresora apagada / sin papel / offline | Enciende y revisa la SELPHY |
+
+### Ajustar el nombre a buscar (Windows)
+
+Si tu impresora se llama, por ejemplo, `Canon CP1500`, arranca así (cmd):
+
+```bat
+set SELPHY_MATCH=cp1500
+node server.mjs
+```
 
 ## Configuración (opcional, variables de entorno)
 
@@ -39,16 +75,12 @@ Safari puede bloquearlo — si usas Safari, abre la app localmente por `http://`
 |----------|---------|-------------|
 | `PORT` | `47801` | Puerto del helper |
 | `SELPHY_MATCH` | `selphy` | Texto que debe contener el nombre de la impresora |
-| `PRINT_OPTIONS` | `fit-to-page` | Opciones de `lp` (separadas por coma) |
+| `PRINT_OPTIONS` | `fit-to-page` | Opciones de `lp` (solo macOS/Linux) |
+| `PRINT_CMD_WIN` | `mspaint /pt "{file}" "{printer}"` | Comando de impresión en Windows (plantilla con `{file}` y `{printer}`) |
 | `ALLOW_ORIGIN` | `*` | Origen permitido (CORS) |
-
-Ejemplo:
-
-```bash
-PRINT_OPTIONS=fit-to-page,media=Postcard node print-helper/server.mjs
-```
 
 ## Endpoints
 
 - `GET /status` → `{ connected, printer, detail }`
+- `GET /diag` → diagnóstico completo `{ platform, tool, toolAvailable, match, printers, matched, connected, port, version }`
 - `POST /print` → body `{ imageUrl }` ó `{ imageBase64 }`

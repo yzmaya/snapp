@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-// URL del helper local de impresión (corre en la Mac del evento).
-const HELPER_URL =
+// URL del helper local de impresión (corre en la computadora del evento).
+export const HELPER_URL =
   import.meta.env.VITE_PRINT_HELPER_URL || 'http://localhost:47801'
 
 /**

@@ -901,3 +901,82 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   Diagnóstico de impresora (#/impresora)
+   ============================================================ */
+.diag-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(122, 166, 245, 0.14);
+}
+.diag-row:last-child {
+  border-bottom: none;
+}
+.diag-row__icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 15px;
+}
+.diag-row[data-state='ok'] .diag-row__icon {
+  color: var(--success);
+  background: rgba(51, 192, 107, 0.15);
+  border: 1px solid rgba(51, 192, 107, 0.4);
+}
+.diag-row[data-state='bad'] .diag-row__icon {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.14);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+}
+.diag-row[data-state='pending'] .diag-row__icon {
+  color: var(--ink-400);
+  background: rgba(122, 166, 245, 0.1);
+  border: 1px solid rgba(122, 166, 245, 0.25);
+}
+.diag-row__body {
+  flex: 1;
+  min-width: 0;
+}
+.diag-row__detail {
+  color: var(--ink-300);
+  font-size: 14px;
+  margin-top: 4px;
+}
+.diag-row__detail ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.diag-row__detail code {
+  background: rgba(122, 166, 245, 0.16);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 13px;
+}
+.diag-warn {
+  margin-top: 8px;
+  color: var(--ink-100);
+  background: rgba(255, 179, 71, 0.1);
+  border: 1px solid rgba(255, 179, 71, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.diag-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.diag-ok {
+  color: var(--success);
+  font-weight: 700;
+  margin: 0;
+}
