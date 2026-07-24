@@ -41,9 +41,18 @@ página de prueba**.
 ## Cómo lo usa la app
 
 - La app consulta `http://localhost:47801/status`. Si la SELPHY está conectada,
-  muestra el botón **Imprimir** en el modal de resultado.
+  muestra el botón **Imprimir** en el modal de resultado (una sola copia).
 - Al imprimir, la app envía la imagen a `http://localhost:47801/print`, y el
-  helper la manda a la impresora (Windows: `mspaint /pt` · macOS/Linux: `lp`).
+  helper la manda a la impresora:
+  - **Windows:** `print-image.ps1` (System.Drawing / GDI+) — impresión directa,
+    determinista y sin abrir Paint. Auto-rota y ajusta la foto a la postal.
+  - **macOS/Linux:** `lp` (CUPS).
+- Los trabajos se **serializan** (uno tras otro) y tienen **timeout**, así dos
+  impresiones no se enciman ni se cuelgan.
+
+> La SELPHY (sublimación) tarda ~1 minuto en sacar cada foto: es normal que el
+> display diga «Procesando» un rato. El helper responde en cuanto encola el
+> trabajo; la impresora termina sola.
 
 ## Importante (navegador)
 
@@ -76,7 +85,8 @@ node server.mjs
 | `PORT` | `47801` | Puerto del helper |
 | `SELPHY_MATCH` | `selphy` | Texto que debe contener el nombre de la impresora |
 | `PRINT_OPTIONS` | `fit-to-page` | Opciones de `lp` (solo macOS/Linux) |
-| `PRINT_CMD_WIN` | `mspaint /pt "{file}" "{printer}"` | Comando de impresión en Windows (plantilla con `{file}` y `{printer}`) |
+| `PRINT_CMD_WIN` | (vacío) | Comando propio de impresión en Windows (plantilla `{file}`/`{printer}`). Si se define, reemplaza a `print-image.ps1` |
+| `PRINT_TIMEOUT_MS` | `90000` | Tiempo máx. por trabajo antes de reportar error |
 | `ALLOW_ORIGIN` | `*` | Origen permitido (CORS) |
 
 ## Endpoints

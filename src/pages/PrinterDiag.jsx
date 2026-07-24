@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { HELPER_URL } from '../hooks/usePrinter.js'
 
@@ -48,9 +48,9 @@ export default function PrinterDiag() {
   const [reachable, setReachable] = useState(null) // null | bool
   const [latency, setLatency] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [checkedAt, setCheckedAt] = useState(null)
   const [printState, setPrintState] = useState('idle') // idle | printing | done | error
   const [printMsg, setPrintMsg] = useState('')
-  const timer = useRef(null)
 
   const check = useCallback(async () => {
     setLoading(true)
@@ -70,14 +70,14 @@ export default function PrinterDiag() {
       setDiag(null)
       setLatency(null)
     } finally {
+      setCheckedAt(new Date())
       setLoading(false)
     }
   }, [])
 
+  // Verificación solo al abrir la pantalla; luego, a demanda con el botón.
   useEffect(() => {
     check()
-    timer.current = setInterval(check, 4000)
-    return () => clearInterval(timer.current)
   }, [check])
 
   const testPrint = async () => {
@@ -112,8 +112,8 @@ export default function PrinterDiag() {
         </div>
         <div className="admin-header__right">
           <Link to="/" className="btn btn--ghost">Ver app</Link>
-          <button className="btn btn--ghost" onClick={check} disabled={loading}>
-            {loading ? 'Comprobando…' : 'Reintentar'}
+          <button className="btn btn--primary" onClick={check} disabled={loading}>
+            {loading ? 'Verificando…' : '↻ Verificar conexión'}
           </button>
         </div>
       </header>
@@ -121,6 +121,7 @@ export default function PrinterDiag() {
       <p className="admin-muted">
         Helper consultado: <strong>{HELPER_URL}</strong>
         {latency != null && ` · ${latency} ms`}
+        {checkedAt && ` · última verificación ${checkedAt.toLocaleTimeString()}`}
       </p>
 
       <div className="admin-card" style={{ marginTop: 16, maxWidth: 640 }}>

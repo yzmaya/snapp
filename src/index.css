@@ -476,6 +476,12 @@ body {
   margin: -8px 0 0;
   font-size: 15px;
 }
+.modal__note {
+  text-align: center;
+  color: var(--ink-300);
+  font-size: 13px;
+  margin: 0;
+}
 .modal__img {
   width: 100%;
   border-radius: var(--radius-md);

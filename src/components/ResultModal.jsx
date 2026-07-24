@@ -115,7 +115,8 @@ export default function ResultModal({
               <img src={imageUrl} alt="Tu versión LEGO" />
             </div>
 
-            {/* Botón Imprimir: solo si la SELPHY está conectada (helper local) */}
+            {/* Botón Imprimir: solo si la SELPHY está conectada (helper local).
+                Una sola copia: se deshabilita tras enviar. */}
             {canPrint && (
               <button
                 className="btn btn--print"
@@ -124,11 +125,17 @@ export default function ResultModal({
                 disabled={printState === 'printing' || printState === 'done'}
               >
                 {printState === 'printing'
-                  ? 'Enviando a impresión…'
+                  ? 'Enviando a la impresora…'
                   : printState === 'done'
                     ? '✓ Enviada a la impresora'
                     : '🖨️ Imprimir'}
               </button>
+            )}
+            {printState === 'done' && (
+              <p className="modal__note" style={{ marginTop: 10 }}>
+                La foto tarda ~1 minuto en salir (impresión de alta calidad). No la
+                envíes de nuevo.
+              </p>
             )}
             {printState === 'error' && (
               <p className="form__error" style={{ marginTop: 10 }}>

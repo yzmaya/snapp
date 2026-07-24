@@ -30,12 +30,14 @@ import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import { writeFile, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 
 const execp = promisify(exec)
+const HERE = dirname(fileURLToPath(import.meta.url))
 
-const VERSION = '1.1.0'
+const VERSION = '1.2.0'
 const IS_WIN = process.platform === 'win32'
 const PORT = Number(process.env.PORT || 47801)
 const MATCH = (process.env.SELPHY_MATCH || 'selphy').toLowerCase()
@@ -43,9 +45,11 @@ const PRINT_OPTIONS = (process.env.PRINT_OPTIONS || 'fit-to-page')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
-// Plantilla de impresión en Windows. mspaint /pt "<archivo>" "<impresora>"
-// imprime la imagen de forma silenciosa usando los ajustes por defecto de la cola.
-const PRINT_CMD_WIN = process.env.PRINT_CMD_WIN || 'mspaint /pt "{file}" "{printer}"'
+// Plantilla opcional para forzar un comando de impresión propio en Windows
+// (escape hatch). Si NO se define, se usa print-image.ps1 (System.Drawing),
+// que es determinista y no depende de Paint. Plantilla con {file} y {printer}.
+const PRINT_CMD_WIN = process.env.PRINT_CMD_WIN || ''
+const PRINT_TIMEOUT_MS = Number(process.env.PRINT_TIMEOUT_MS || 90000)
 const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || '*'
 
 function setCors(res) {
@@ -127,15 +131,46 @@ async function findPrinter() {
 // ------------------------------------------------------------
 // Impresión (multiplataforma)
 // ------------------------------------------------------------
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label}: timeout tras ${ms}ms`)), ms)
+    promise.then(
+      (v) => { clearTimeout(t); resolve(v) },
+      (e) => { clearTimeout(t); reject(e) },
+    )
+  })
+}
+
 async function printImage(printer, file) {
   if (IS_WIN) {
-    const cmd = PRINT_CMD_WIN.replaceAll('{file}', file).replaceAll('{printer}', printer.name)
+    // Escape hatch: comando propio si el operador definió PRINT_CMD_WIN.
+    if (PRINT_CMD_WIN) {
+      const cmd = PRINT_CMD_WIN.replaceAll('{file}', file).replaceAll('{printer}', printer.name)
+      const { stdout } = await execp(cmd, { windowsHide: true })
+      return stdout.trim()
+    }
+    // Por defecto: impresión determinista con System.Drawing (sin Paint).
+    const ps1 = join(HERE, 'print-image.ps1')
+    const cmd =
+      `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass ` +
+      `-File "${ps1}" -ImagePath "${file}" -PrinterName "${printer.name}"`
     const { stdout } = await execp(cmd, { windowsHide: true })
     return stdout.trim()
   }
   const opts = PRINT_OPTIONS.map((o) => `-o ${o}`).join(' ')
   const { stdout } = await execp(`lp -d ${printer.name} ${opts} "${file}"`)
   return stdout.trim()
+}
+
+// Serializa los trabajos: dos impresiones no se enciman en la SELPHY.
+let printChain = Promise.resolve()
+function runPrint(printer, file) {
+  const job = printChain.then(() =>
+    withTimeout(printImage(printer, file), PRINT_TIMEOUT_MS, 'impresión'),
+  )
+  // La cadena continúa aunque un trabajo falle.
+  printChain = job.catch(() => {})
+  return job
 }
 
 // ------------------------------------------------------------
@@ -216,7 +251,7 @@ async function handlePrint(req, res) {
   const file = join(tmpdir(), `snapp-${randomUUID()}.png`)
   try {
     await writeFile(file, bytes)
-    const message = await printImage(printer, file)
+    const message = await runPrint(printer, file)
     sendJson(res, 200, { ok: true, printer: printer.name, message })
   } catch (e) {
     sendJson(res, 500, { error: 'Falló la impresión: ' + (e.message || e) })
