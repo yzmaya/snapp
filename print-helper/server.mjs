@@ -37,7 +37,7 @@ import { randomUUID } from 'node:crypto'
 const execp = promisify(exec)
 const HERE = dirname(fileURLToPath(import.meta.url))
 
-const VERSION = '1.2.0'
+const VERSION = '1.3.0'
 const IS_WIN = process.platform === 'win32'
 const PORT = Number(process.env.PORT || 47801)
 const MATCH = (process.env.SELPHY_MATCH || 'selphy').toLowerCase()
@@ -51,6 +51,10 @@ const PRINT_OPTIONS = (process.env.PRINT_OPTIONS || 'fit-to-page')
 const PRINT_CMD_WIN = process.env.PRINT_CMD_WIN || ''
 const PRINT_TIMEOUT_MS = Number(process.env.PRINT_TIMEOUT_MS || 90000)
 const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || '*'
+// Vida de la caché de detección. Listar impresoras en Windows lanza un
+// proceso de PowerShell (~4s); sin caché, el polling del kiosco encadenaba
+// un proceso tras otro y /status nunca respondía a tiempo.
+const DETECT_TTL_MS = Number(process.env.DETECT_TTL_MS || 8000)
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', ALLOW_ORIGIN)
@@ -118,11 +122,47 @@ async function listPrintersWindows() {
     })
 }
 
+// ------------------------------------------------------------
+// Caché de detección (stale-while-revalidate)
+// ------------------------------------------------------------
+// El kiosco consulta /status cada pocos segundos. Sin caché, cada consulta
+// lanzaba un PowerShell nuevo (~4s) y las peticiones se encimaban. Ahora:
+//   - sin caché aún  → se espera al listado real (única vez lenta)
+//   - caché fresca   → respuesta inmediata
+//   - caché vencida  → se responde con lo último conocido y se refresca detrás
+let cache = null            // { at, printers }
+let inflight = null         // Promise en curso (evita procesos duplicados)
+
+function refreshPrinters() {
+  if (inflight) return inflight
+  inflight = listPrinters()
+    .then((printers) => {
+      cache = { at: Date.now(), printers }
+      return printers
+    })
+    .finally(() => {
+      inflight = null
+    })
+  return inflight
+}
+
+// `fresh: true` fuerza un listado real (para /diag y antes de imprimir).
+async function getPrinters({ fresh = false } = {}) {
+  if (fresh || !cache) return refreshPrinters()
+  if (Date.now() - cache.at > DETECT_TTL_MS) {
+    // Refresco en segundo plano; devolvemos lo último conocido.
+    refreshPrinters().catch(() => {})
+  }
+  return cache.printers
+}
+
+const matchPrinter = (list) =>
+  list.find((p) => p.name.toLowerCase().includes(MATCH)) ?? null
+
 // La cola SELPHY (primera cuyo nombre contiene MATCH), o null.
-async function findPrinter() {
+async function findPrinter(opts) {
   try {
-    const all = await listPrinters()
-    return all.find((p) => p.name.toLowerCase().includes(MATCH)) ?? null
+    return matchPrinter(await getPrinters(opts))
   } catch {
     return null
   }
@@ -189,12 +229,13 @@ async function handleDiag(res) {
   let printers = []
   let toolAvailable = true
   try {
-    printers = await listPrinters()
+    // El diagnóstico siempre mide el estado real, sin caché.
+    printers = await getPrinters({ fresh: true })
   } catch (e) {
     toolAvailable = false
     printers = []
   }
-  const matched = printers.find((p) => p.name.toLowerCase().includes(MATCH)) ?? null
+  const matched = matchPrinter(printers)
   sendJson(res, 200, {
     platform: process.platform,
     tool: IS_WIN ? 'powershell' : 'cups',
@@ -221,7 +262,8 @@ function readBody(req) {
 }
 
 async function handlePrint(req, res) {
-  const printer = await findPrinter()
+  // Antes de imprimir confirmamos contra el sistema, no contra la caché.
+  const printer = await findPrinter({ fresh: true })
   if (!printer) return sendJson(res, 409, { error: 'Impresora SELPHY no encontrada.' })
 
   let body

@@ -87,7 +87,15 @@ node server.mjs
 | `PRINT_OPTIONS` | `fit-to-page` | Opciones de `lp` (solo macOS/Linux) |
 | `PRINT_CMD_WIN` | (vacío) | Comando propio de impresión en Windows (plantilla `{file}`/`{printer}`). Si se define, reemplaza a `print-image.ps1` |
 | `PRINT_TIMEOUT_MS` | `90000` | Tiempo máx. por trabajo antes de reportar error |
+| `DETECT_TTL_MS` | `8000` | Vida de la caché de detección de impresoras (ver abajo) |
 | `ALLOW_ORIGIN` | `*` | Origen permitido (CORS) |
+
+### Sobre la caché de detección
+
+Listar impresoras en Windows lanza un proceso de PowerShell y tarda ~4 s. El
+helper cachea el resultado, así que `/status` (el que consulta el kiosco cada
+10 s) responde en milisegundos. `/diag` y `/print` **siempre** consultan el
+estado real, sin caché.
 
 ## Endpoints
 
