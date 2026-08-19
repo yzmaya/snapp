@@ -335,16 +335,16 @@ function Dashboard({ session }) {
       position: variants.length,
       label: `Opción ${variants.length + 1}`,
       prompt:
-        'En la imagen de REFERENCIA aparece un personaje (recortado, con fondo ' +
-        'transparente). Intégralo de forma realista JUNTO a la persona o personas ' +
-        'de la FOTO, MUY CERCA y en contacto físico, en pose amistosa de convivencia: ' +
-        'el personaje pasa el brazo por detrás y apoya la mano sobre el hombro de la ' +
-        'persona, de modo que se vean unidos e interactuando para la misma foto (NO ' +
-        'separados ni distantes). Deben compartir el mismo plano y distancia a la ' +
-        'cámara, con iluminación, perspectiva, escala y sombras coherentes y bordes ' +
-        'naturales. Conserva de forma fiel y reconocible el rostro y los rasgos tanto ' +
-        'del personaje de la referencia como de las personas de la FOTO. Mantén el ' +
-        'fondo y el entorno de la FOTO original.',
+        'Usa la FOTO real (invitados) como BASE y consérvala INTACTA: NO modifiques ' +
+        'a la persona o personas de la FOTO — mantén EXACTAMENTE su rostro, expresión, ' +
+        'gesto, mirada, peinado, ropa, postura y el fondo tal como están, sin retocar ' +
+        'ni forzar sonrisas. Tu ÚNICA tarea es AÑADIR al personaje de la imagen de ' +
+        'REFERENCIA (recortado, con fondo transparente), integrándolo de forma realista ' +
+        'junto a la persona, muy cerca y en contacto físico: el personaje pasa el brazo ' +
+        'por detrás y apoya la mano sobre el hombro de la persona, adaptándose a la ' +
+        'iluminación, perspectiva, escala y sombras de la FOTO para que se vea natural y ' +
+        'no pegado. Conserva también de forma fiel y reconocible el rostro y los rasgos ' +
+        'del personaje de la referencia.',
     })
     if (error) return flash('Error: ' + error.message)
     await loadVariants(selectedId)
