@@ -129,6 +129,9 @@ const empty = {
   use_logo: false,
   logo_white_path: null,
   logo_color_path: null,
+  use_frame: false,
+  frame_path: null,
+  frame_source: 'generated',
 }
 
 const MAX_VARIANTS = 3
@@ -191,6 +194,9 @@ function Dashboard({ session }) {
         use_logo: p.use_logo,
         logo_white_path: p.logo_white_path,
         logo_color_path: p.logo_color_path,
+        use_frame: p.use_frame ?? false,
+        frame_path: p.frame_path ?? null,
+        frame_source: p.frame_source ?? 'generated',
       })
   }, [selectedId, projects])
 
@@ -225,6 +231,8 @@ function Dashboard({ session }) {
         prompt: form.prompt,
         model_key: form.model_key,
         use_logo: form.use_logo,
+        use_frame: form.use_frame,
+        frame_source: form.frame_source,
       })
       .eq('id', selectedId)
     setSaving(false)
@@ -282,6 +290,37 @@ function Dashboard({ session }) {
 
   const logoUrl = (path) =>
     path ? supabase.storage.from('logos').getPublicUrl(path).data.publicUrl : null
+
+  const frameUrl = (path) =>
+    path ? supabase.storage.from('frames').getPublicUrl(path).data.publicUrl : null
+
+  const uploadFrame = async (file) => {
+    if (!file || !selectedId) return
+    const ext = file.name.split('.').pop()
+    const path = `${selectedId}/frame.${ext}`
+    const { error: upErr } = await supabase.storage
+      .from('frames')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) return flash('Error subiendo marco: ' + upErr.message)
+    const { error } = await supabase
+      .from('projects')
+      .update({ frame_path: path })
+      .eq('id', selectedId)
+    if (error) return flash('Error: ' + error.message)
+    await load()
+    flash('Marco actualizado ✓')
+  }
+
+  const deleteFrame = async () => {
+    if (form.frame_path) await supabase.storage.from('frames').remove([form.frame_path])
+    const { error } = await supabase
+      .from('projects')
+      .update({ frame_path: null })
+      .eq('id', selectedId)
+    if (error) return flash('Error: ' + error.message)
+    await load()
+    flash('Marco eliminado')
+  }
 
   const exampleUrl = (path) =>
     path ? supabase.storage.from('examples').getPublicUrl(path).data.publicUrl : null
@@ -465,6 +504,52 @@ function Dashboard({ session }) {
                   onUpload={(f) => uploadLogo('color', f)}
                   onDelete={() => deleteLogo('color')}
                 />
+              </div>
+
+              {/* Marco: superposición fija sobre la imagen final */}
+              <div className="frame-section">
+                <div className="admin-card__head" style={{ marginTop: 20 }}>
+                  <h2 style={{ fontSize: 16 }}>Marco</h2>
+                </div>
+                <label className="admin-check" style={{ margin: '4px 0 10px' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.use_frame}
+                    onChange={(e) => setForm({ ...form, use_frame: e.target.checked })}
+                  />
+                  Usar marco (la foto aparece dentro de este marco fijo)
+                </label>
+
+                {form.use_frame && (
+                  <>
+                    <p className="admin-hint" style={{ marginTop: 0, marginBottom: 12 }}>
+                      Sube un <strong>PNG con el centro transparente</strong> (la
+                      ventana donde aparecerá la foto). Detectamos esa zona y
+                      colocamos la imagen ahí; los bordes, encabezado y banner del
+                      marco quedan por encima.
+                    </p>
+
+                    <div className="field">
+                      <label>Aplicar el marco a</label>
+                      <select
+                        value={form.frame_source}
+                        onChange={(e) => setForm({ ...form, frame_source: e.target.value })}
+                      >
+                        <option value="generated">El resultado generado por IA</option>
+                        <option value="original">La foto original (sin IA)</option>
+                      </select>
+                    </div>
+
+                    <div className="logos" style={{ gridTemplateColumns: '1fr' }}>
+                      <LogoSlot
+                        title="Imagen del marco (PNG transparente)"
+                        url={frameUrl(form.frame_path)}
+                        onUpload={(f) => uploadFrame(f)}
+                        onDelete={() => deleteFrame()}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="variants">

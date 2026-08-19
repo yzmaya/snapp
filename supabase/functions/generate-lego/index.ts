@@ -294,6 +294,56 @@ async function generate(cfg: GenCfg, photo: Img): Promise<{ img: Img; provider: 
   throw lastErr
 }
 
+// ---------- Marco (superposición fija) ----------
+// Coloca la foto DENTRO de la ventana transparente del marco y superpone el
+// marco encima. Detecta la ventana como el recuadro de píxeles transparentes.
+async function applyFrame(frameBytes: Uint8Array, base: Img): Promise<Img> {
+  // Import dinámico: solo se carga la librería cuando el proyecto usa marco.
+  const { Image } = await import('https://deno.land/x/imagescript@1.2.15/mod.ts')
+  const frame = await Image.decode(frameBytes)
+  const fw = frame.width
+  const fh = frame.height
+
+  // 1) Detectar la ventana transparente (bounding box de alpha ~0).
+  const bmp = frame.bitmap // Uint8ClampedArray RGBA
+  const ALPHA_T = 16
+  let minX = fw, minY = fh, maxX = -1, maxY = -1
+  for (let y = 0; y < fh; y++) {
+    for (let x = 0; x < fw; x++) {
+      if (bmp[(y * fw + x) * 4 + 3] < ALPHA_T) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  let bx = 0, by = 0, bw = fw, bh = fh
+  if (maxX >= minX && maxY >= minY) {
+    bx = minX; by = minY; bw = maxX - minX + 1; bh = maxY - minY + 1
+  }
+  // Si no hay zona transparente, se cubre todo el lienzo (bx/by=0, bw/bh=fw/fh).
+
+  // 2) Escalar la foto para CUBRIR la ventana y recortar al centro.
+  const photo = await Image.decode(base.bytes)
+  const scale = Math.max(bw / photo.width, bh / photo.height)
+  const rw = Math.max(1, Math.round(photo.width * scale))
+  const rh = Math.max(1, Math.round(photo.height * scale))
+  photo.resize(rw, rh)
+  const cx = Math.max(0, Math.round((rw - bw) / 2))
+  const cy = Math.max(0, Math.round((rh - bh) / 2))
+  photo.crop(cx, cy, bw, bh)
+
+  // 3) Componer: fondo blanco → foto en la ventana → marco encima.
+  const out = new Image(fw, fh)
+  out.fill(0xffffffff)
+  out.composite(photo, bx, by)
+  out.composite(frame, 0, 0)
+
+  const png = await out.encode()
+  return { bytes: png, mime: 'image/png' }
+}
+
 // ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -309,7 +359,9 @@ Deno.serve(async (req) => {
     // ---- Proyecto activo ----
     const { data: project } = await supabase
       .from('projects')
-      .select('id, title, prompt, model_key, use_logo, logo_white_path, logo_color_path')
+      .select(
+        'id, title, prompt, model_key, use_logo, logo_white_path, logo_color_path, use_frame, frame_path, frame_source',
+      )
       .eq('is_active', true)
       .maybeSingle()
 
@@ -366,10 +418,46 @@ Deno.serve(async (req) => {
       .upload(originalPath, original.bytes, { contentType: original.mime, upsert: true })
     if (up1.error) throw new Error(`Storage (original): ${up1.error.message}`)
 
-    // 2) Generar
+    // ---- Marco del proyecto (si lo usa) ----
+    const useFrame = !!(project?.use_frame && project.frame_path)
+    const frameOriginal = useFrame && project?.frame_source === 'original'
+    let frameBytes: Uint8Array | null = null
+    if (useFrame) {
+      const dl = await supabase.storage.from('frames').download(project!.frame_path!)
+      if (dl.data) frameBytes = new Uint8Array(await dl.data.arrayBuffer())
+      else providerTrail.push('frame: no se pudo descargar')
+    }
+
+    // 2) Obtener la imagen base: IA, o la foto original si el marco así lo indica.
+    let generated: Img
+    let provider: string
+    let model: string
+    let fallbackUsed: boolean
     const genStart = Date.now()
-    const { img: generated, provider, model, fallbackUsed } = await generate(cfg, original)
+    if (frameOriginal) {
+      generated = original
+      provider = 'none'
+      model = 'frame-only'
+      fallbackUsed = false
+      providerTrail.push('none: foto original (sin IA)')
+    } else {
+      const g = await generate(cfg, original)
+      generated = g.img
+      provider = g.provider
+      model = g.model
+      fallbackUsed = g.fallbackUsed
+    }
     const generationMs = Date.now() - genStart
+
+    // 2b) Aplicar el marco encima (falla suave: si el marco da error, se sigue sin él).
+    if (frameBytes) {
+      try {
+        generated = await applyFrame(frameBytes, generated)
+        providerTrail.push('frame: OK')
+      } catch (e) {
+        providerTrail.push('frame: ERROR ' + String((e as Error)?.message ?? e))
+      }
+    }
 
     // 3) Subir generada
     const generatedPath = `${id}.${extFromMime(generated.mime)}`
