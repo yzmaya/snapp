@@ -337,10 +337,13 @@ function Dashboard({ session }) {
       prompt:
         'En la imagen de REFERENCIA aparece un personaje (recortado, con fondo ' +
         'transparente). Intégralo de forma realista JUNTO a la persona o personas ' +
-        'de la FOTO, como si posaran todos juntos para la misma foto: misma ' +
-        'iluminación, perspectiva, escala y sombras coherentes, bordes naturales. ' +
-        'Conserva de forma fiel y reconocible el rostro y los rasgos tanto del ' +
-        'personaje de la referencia como de las personas de la FOTO. Mantén el ' +
+        'de la FOTO, MUY CERCA y en contacto físico, en pose amistosa de convivencia: ' +
+        'el personaje pasa el brazo por detrás y apoya la mano sobre el hombro de la ' +
+        'persona, de modo que se vean unidos e interactuando para la misma foto (NO ' +
+        'separados ni distantes). Deben compartir el mismo plano y distancia a la ' +
+        'cámara, con iluminación, perspectiva, escala y sombras coherentes y bordes ' +
+        'naturales. Conserva de forma fiel y reconocible el rostro y los rasgos tanto ' +
+        'del personaje de la referencia como de las personas de la FOTO. Mantén el ' +
         'fondo y el entorno de la FOTO original.',
     })
     if (error) return flash('Error: ' + error.message)
