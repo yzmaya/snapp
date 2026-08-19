@@ -112,7 +112,10 @@ Deno.serve(async (req) => {
     if (subErr || !sub)
       return json({ error: 'No se encontró la foto (submission).' }, 404)
 
-    // Descarga la imagen generada para adjuntarla
+    // Descarga la imagen generada para adjuntarla.
+    // Si pesa demasiado (p. ej. imágenes con marco), se omite el adjunto y el
+    // correo sale igual con el enlace para ver/descargar (evita que falle todo).
+    const MAX_ATTACH_BYTES = 6 * 1024 * 1024
     let attachmentB64 = ''
     let attachmentMime = 'image/png'
     if (sub.generated_path) {
@@ -121,8 +124,12 @@ Deno.serve(async (req) => {
         .download(sub.generated_path)
       if (dl.data) {
         const buf = new Uint8Array(await dl.data.arrayBuffer())
-        attachmentB64 = bytesToBase64(buf)
-        attachmentMime = dl.data.type || attachmentMime
+        if (buf.length <= MAX_ATTACH_BYTES) {
+          attachmentB64 = bytesToBase64(buf)
+          attachmentMime = dl.data.type || attachmentMime
+        } else {
+          console.warn(`Adjunto omitido: ${buf.length} bytes > límite`)
+        }
       }
     }
 

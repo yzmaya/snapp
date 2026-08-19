@@ -340,8 +340,10 @@ async function applyFrame(frameBytes: Uint8Array, base: Img): Promise<Img> {
   out.composite(photo, bx, by)
   out.composite(frame, 0, 0)
 
-  const png = await out.encode()
-  return { bytes: png, mime: 'image/png' }
+  // Resultado OPACO (sin transparencia) → JPEG para mantener el archivo ligero
+  // (un PNG del marco pesaba ~3.6 MB y hacía fallar el envío del correo).
+  const jpg = await out.encodeJPEG(85)
+  return { bytes: jpg, mime: 'image/jpeg' }
 }
 
 // ---------- Handler ----------
