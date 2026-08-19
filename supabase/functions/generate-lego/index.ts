@@ -40,13 +40,14 @@ const LOGO_INSTRUCTION =
   'en blanco del logo si esa zona queda con fondo oscuro, o la versión a color si el ' +
   'fondo es claro.'
 
+// Nota neutral: el PROMPT del estilo manda (puede pedir insertar un personaje,
+// o llevar al invitado a una escena). Aquí solo aclaramos los roles de las
+// imágenes y exigimos conservar los rostros reales.
 const REFERENCE_INSTRUCTION =
-  ' Te proporciono también una imagen de REFERENCIA del resultado deseado. Usa esa ' +
-  'referencia como guía de estilo, escena, personajes, vestuario, iluminación y ' +
-  'composición, y genera una imagen que se parezca lo más posible a ella, pero ' +
-  'integrando de forma realista a la persona (o personas) de la FOTO real, ' +
-  'conservando fielmente su rostro, rasgos, tono de piel y peinado para que sea ' +
-  'reconocible.'
+  ' Además de la FOTO real, te doy una imagen de REFERENCIA. Combínalas siguiendo ' +
+  'las instrucciones anteriores, con iluminación, perspectiva y escala coherentes, ' +
+  'y conservando de forma realista y reconocible el rostro y los rasgos de las ' +
+  'personas que aparecen en la FOTO real.'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -146,9 +147,9 @@ function geminiBody(cfg: GenCfg, photo: Img) {
   const parts: any[] = [{ text: cfg.prompt }]
   if (cfg.references.length) {
     // Con referencia: etiquetamos cada imagen para que el modelo sepa su rol.
-    parts.push({ text: 'FOTO real de la persona:' }, inline(photo))
+    parts.push({ text: 'FOTO real (invitados):' }, inline(photo))
     for (const ref of cfg.references)
-      parts.push({ text: 'Imagen de REFERENCIA del resultado deseado:' }, inline(ref))
+      parts.push({ text: 'Imagen de REFERENCIA:' }, inline(ref))
   } else {
     parts.push(inline(photo))
   }

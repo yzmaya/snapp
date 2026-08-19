@@ -134,7 +134,7 @@ const empty = {
   frame_source: 'generated',
 }
 
-const MAX_VARIANTS = 3
+const MAX_VARIANTS = 10
 
 function Dashboard({ session }) {
   const [projects, setProjects] = useState([])
@@ -335,9 +335,13 @@ function Dashboard({ session }) {
       position: variants.length,
       label: `Opción ${variants.length + 1}`,
       prompt:
-        'Toma la imagen de referencia y adáptala para que la persona (o personas) ' +
-        'de la foto aparezca dentro de esa escena de forma realista, conservando sus ' +
-        'rasgos, rostro y peinado.',
+        'En la imagen de REFERENCIA aparece un personaje (recortado, con fondo ' +
+        'transparente). Intégralo de forma realista JUNTO a la persona o personas ' +
+        'de la FOTO, como si posaran todos juntos para la misma foto: misma ' +
+        'iluminación, perspectiva, escala y sombras coherentes, bordes naturales. ' +
+        'Conserva de forma fiel y reconocible el rostro y los rasgos tanto del ' +
+        'personaje de la referencia como de las personas de la FOTO. Mantén el ' +
+        'fondo y el entorno de la FOTO original.',
     })
     if (error) return flash('Error: ' + error.message)
     await loadVariants(selectedId)
@@ -564,13 +568,13 @@ function Dashboard({ session }) {
                   </button>
                 </div>
                 <p className="admin-hint" style={{ marginTop: 0, marginBottom: 12 }}>
-                  Agrega de 1 a {MAX_VARIANTS} estilos con su imagen de ejemplo y su
-                  propio prompt. El invitado elige uno antes de tomarse la foto. La
-                  imagen de ejemplo se envía a la IA como <strong>referencia</strong> del
-                  resultado, así que redacta el prompt en ese sentido (p. ej. «Toma la
-                  imagen de referencia y adáptala para que la persona de la foto aparezca
-                  ahí, conservando sus rasgos»). Sin estilos, el proyecto usa el prompt de
-                  arriba (comportamiento normal).
+                  Agrega de 1 a {MAX_VARIANTS} estilos, cada uno con la imagen del
+                  personaje/escena de referencia. El invitado elige uno antes de tomarse
+                  la foto y esa referencia se envía a la IA junto con su foto. El prompt
+                  por defecto ya inserta al <strong>personaje de la referencia junto a los
+                  invitados</strong> (como si posaran juntos); solo necesitas subir la
+                  imagen. Puedes ajustar el prompt si quieres otro efecto. Sin estilos, el
+                  proyecto usa el prompt de arriba.
                 </p>
                 {variants.length === 0 ? (
                   <p className="admin-muted">Este proyecto no tiene estilos (usa el prompt general).</p>
