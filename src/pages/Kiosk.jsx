@@ -7,7 +7,12 @@ import { useCamera } from '../hooks/useCamera.js'
 import { usePrinter } from '../hooks/usePrinter.js'
 import { supabase } from '../lib/supabase.js'
 
-const PRIVACY_URL = `${import.meta.env.BASE_URL}aviso-privacidad.html`
+const BASE = import.meta.env.BASE_URL
+// Aviso de privacidad por tema: el evento Summer Supplier Summit usa uno propio.
+const PRIVACY_URLS = {
+  default: `${BASE}aviso-privacidad.html`,
+  sss: `${BASE}aviso-privacidad-sss.html`,
+}
 
 // Flujo: 'live' → 'counting' → 'preview' → 'generating' → 'result'
 export default function Kiosk() {
@@ -29,8 +34,11 @@ export default function Kiosk() {
   const [toast, setToast] = useState('')
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [projectTitle, setProjectTitle] = useState('')
+  const [theme, setTheme] = useState('default')
   const [variants, setVariants] = useState([])
   const [variantId, setVariantId] = useState(null)
+
+  const privacyUrl = PRIVACY_URLS[theme] || PRIVACY_URLS.default
 
   const flashRef = useRef(null)
 
@@ -38,14 +46,15 @@ export default function Kiosk() {
     start()
   }, [start])
 
-  // Título del proyecto activo (configurable desde el panel admin)
+  // Proyecto activo: título + tema/identidad (configurable desde el panel admin)
   useEffect(() => {
     supabase
       .from('v_active_project')
-      .select('title')
+      .select('title, theme')
       .maybeSingle()
       .then(({ data }) => {
         if (data?.title) setProjectTitle(data.title)
+        if (data?.theme) setTheme(data.theme)
       })
   }, [])
 
@@ -148,7 +157,7 @@ export default function Kiosk() {
   const showPhoto = phase === 'preview' || phase === 'generating' || phase === 'result'
 
   return (
-    <div className="app">
+    <div className="app" data-theme={theme === 'default' ? undefined : theme}>
       <div className="app-bg" />
       <Brand />
       {projectTitle && <div className="project-chip">{projectTitle}</div>}
@@ -261,7 +270,7 @@ export default function Kiosk() {
               />
               <span>
                 He leído y acepto el{' '}
-                <a href={PRIVACY_URL} target="_blank" rel="noreferrer">
+                <a href={privacyUrl} target="_blank" rel="noreferrer">
                   aviso de privacidad
                 </a>
                 .

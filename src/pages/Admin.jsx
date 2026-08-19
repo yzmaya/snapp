@@ -132,6 +132,7 @@ const empty = {
   use_frame: false,
   frame_path: null,
   frame_source: 'generated',
+  theme: 'default',
 }
 
 const MAX_VARIANTS = 10
@@ -197,6 +198,7 @@ function Dashboard({ session }) {
         use_frame: p.use_frame ?? false,
         frame_path: p.frame_path ?? null,
         frame_source: p.frame_source ?? 'generated',
+        theme: p.theme ?? 'default',
       })
   }, [selectedId, projects])
 
@@ -233,6 +235,7 @@ function Dashboard({ session }) {
         use_logo: form.use_logo,
         use_frame: form.use_frame,
         frame_source: form.frame_source,
+        theme: form.theme,
       })
       .eq('id', selectedId)
     setSaving(false)
@@ -478,6 +481,21 @@ function Dashboard({ session }) {
                     <option key={m.key} value={m.key}>{m.label}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="field">
+                <label>Identidad / tema del kiosko</label>
+                <select
+                  value={form.theme}
+                  onChange={(e) => setForm({ ...form, theme: e.target.value })}
+                >
+                  <option value="default">SNAPP · azul (por defecto)</option>
+                  <option value="sss">Summer Supplier Summit · claro rojo/azul</option>
+                </select>
+                <span className="admin-hint" style={{ marginTop: 6 }}>
+                  Cambia el look del kiosko y el aviso de privacidad del proyecto. El
+                  panel de administración no cambia.
+                </span>
               </div>
 
               <div className="field">

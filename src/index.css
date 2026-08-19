@@ -32,6 +32,109 @@
   color-scheme: dark;
 }
 
+/* ============================================================
+   Tema "Summer Supplier Summit" (claro · rojo + azul ENR)
+   Se aplica SOLO al kiosko público: <div class="app" data-theme="sss">
+   El panel de administración conserva el look azul original.
+   ============================================================ */
+.app[data-theme='sss'] {
+  --navy-900: #e7ebf1;
+  --navy-800: #f4f6f9;
+  --navy-700: #ffffff;
+  --navy-600: #eef1f6;
+  --blue-500: #e1251d; /* rojo ENR = acento primario */
+  --blue-400: #ec4a43;
+  --blue-300: #1e4fa0; /* azul ENR = secundario */
+  --ink-100: #16181d;
+  --ink-300: #414b59;
+  --ink-400: #6d7889;
+  --shadow-blue: 0 12px 40px -10px rgba(225, 37, 29, 0.45);
+  --shadow-soft: 0 22px 60px -26px rgba(20, 30, 60, 0.28);
+  color-scheme: light;
+}
+/* Fondo claro con blobs sutiles rojo/azul (en vez de azul marino) */
+.app[data-theme='sss'] .app-bg::before {
+  background: radial-gradient(circle at 30% 30%, #ffdad7, #ffffff 70%);
+  opacity: 0.7;
+}
+.app[data-theme='sss'] .app-bg::after {
+  background: radial-gradient(circle at 30% 30%, #d9e3f6, #ffffff 70%);
+  opacity: 0.6;
+}
+/* Textos que eran blancos sobre fondo oscuro */
+.app[data-theme='sss'] .wordmark {
+  color: var(--ink-100);
+}
+/* Superficies que eran oscuras → claras */
+.app[data-theme='sss'] .frame {
+  background: #eef1f6;
+  border-color: rgba(30, 79, 160, 0.18);
+}
+.app[data-theme='sss'] .frame__overlay {
+  background: rgba(244, 246, 249, 0.94);
+  color: var(--ink-300);
+}
+.app[data-theme='sss'] .modal__img {
+  background: #eef1f6;
+}
+.app[data-theme='sss'] .style-card {
+  background: #ffffff;
+  border-color: rgba(30, 79, 160, 0.25);
+}
+.app[data-theme='sss'] .style-card:hover {
+  border-color: rgba(30, 79, 160, 0.5);
+}
+.app[data-theme='sss'] .style-card__img {
+  background: #eef1f6;
+}
+/* Botones secundarios claros */
+.app[data-theme='sss'] .btn--ghost,
+.app[data-theme='sss'] .btn--print {
+  background: #eef1f6;
+  color: var(--ink-100);
+  border: 1px solid rgba(30, 79, 160, 0.25);
+}
+.app[data-theme='sss'] .btn--ghost:hover:not(:disabled),
+.app[data-theme='sss'] .btn--print:hover:not(:disabled) {
+  background: #e3e8f0;
+}
+/* Botón de cancelar/eliminar legible sobre claro */
+.app[data-theme='sss'] .btn--danger {
+  background: rgba(225, 37, 29, 0.08);
+  color: #c62026;
+  border: 1px solid rgba(225, 37, 29, 0.4);
+}
+.app[data-theme='sss'] .btn--danger:hover:not(:disabled) {
+  background: rgba(225, 37, 29, 0.16);
+}
+/* Chip del proyecto en rojo de marca */
+.app[data-theme='sss'] .project-chip {
+  background: rgba(225, 37, 29, 0.1);
+  border-color: rgba(225, 37, 29, 0.35);
+  color: #b81f18;
+}
+/* Campos del formulario claros */
+.app[data-theme='sss'] .field input,
+.app[data-theme='sss'] .field select,
+.app[data-theme='sss'] .field textarea {
+  background: #ffffff;
+  color: var(--ink-100);
+  border-color: rgba(30, 79, 160, 0.25);
+}
+.app[data-theme='sss'] .form__error {
+  color: #c62026;
+}
+/* Toast de error legible sobre claro */
+.app[data-theme='sss'] .toast {
+  background: #fdecea;
+  border-color: rgba(225, 37, 29, 0.4);
+  color: #b81f18;
+}
+/* Anillo del spinner sobre claro */
+.app[data-theme='sss'] .spinner {
+  border-color: rgba(30, 79, 160, 0.2);
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
