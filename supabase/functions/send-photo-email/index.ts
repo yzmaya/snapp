@@ -86,6 +86,74 @@ function buildHtml(name: string, imageUrl: string) {
 </body></html>`
 }
 
+// Correo brandeado del evento Summer Supplier Summit 2026 (identidad ENR).
+function buildHtmlSss(name: string, imageUrl: string, qrUrl: string) {
+  const waText = encodeURIComponent(`¡Mira mi foto del Summer Supplier Summit 2026! ✨ ${imageUrl}`)
+  const waHref = `https://wa.me/?text=${waText}`
+  const qrBlock = qrUrl
+    ? `<tr><td style='padding:8px 28px 4px;text-align:center;'>
+         <div style='background:#f4f6f9;border:1px solid rgba(30,79,160,.16);border-radius:16px;padding:18px;'>
+           <p style='margin:0 0 12px;color:#16181d;font-weight:800;font-size:15px;'>Conoce el directorio completo de la Esfera</p>
+           <img src='${qrUrl}' alt='Directorio de la Esfera Nacional' width='168' height='168' style='display:block;margin:0 auto;border-radius:10px;background:#fff;' />
+           <p style='margin:12px 0 0;color:#414b59;font-size:13px;'>Escanea el código para ver nuestras diferentes soluciones.</p>
+         </div>
+       </td></tr>`
+    : ''
+  return `<!doctype html>
+<html lang='es'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;background:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#16181d;'>
+  <div style='height:6px;background:#e1251d;'></div>
+  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='background:#eef1f5;padding:28px 16px;'>
+    <tr><td align='center'>
+      <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='max-width:540px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid rgba(30,79,160,.14);'>
+        <tr><td style='padding:24px 28px 6px;'>
+          <table role='presentation' width='100%'><tr>
+            <td style='vertical-align:middle;'>
+              <div style='display:inline-block;border:2.5px solid #e1251d;border-radius:50%;width:52px;height:52px;text-align:center;line-height:1;'>
+                <div style='color:#e1251d;font-weight:900;font-size:19px;letter-spacing:.02em;margin-top:12px;'>ENR</div>
+              </div>
+            </td>
+            <td style='vertical-align:middle;text-align:right;'>
+              <div style='font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#6d7889;font-weight:700;'>Summer Supplier Summit</div>
+              <div style='font-size:20px;font-weight:900;color:#e1251d;'>2026</div>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td style='padding:8px 28px 4px;'>
+          <p style='font-size:18px;margin:0 0 6px;color:#16181d;'>¡Hola ${esc(name)}! 👋</p>
+          <p style='font-size:15px;line-height:1.6;color:#414b59;margin:0;'>
+            Gracias por participar en el <strong>Summer Supplier Summit 2026</strong>. ¡Aquí tienes tu foto!
+          </p>
+        </td></tr>
+        <tr><td style='padding:18px 28px;'>
+          <img src='${imageUrl}' alt='Tu foto del Summer Supplier Summit' width='100%' style='display:block;width:100%;border-radius:14px;' />
+        </td></tr>
+        <tr><td style='padding:0 28px 8px;text-align:center;'>
+          <a href='${imageUrl}' style='display:inline-block;background:#e1251d;color:#fff;text-decoration:none;font-weight:800;padding:14px 24px;border-radius:12px;font-size:16px;margin:0 4px 10px;'>Ver / descargar mi foto</a>
+          <a href='${waHref}' style='display:inline-block;background:#1e4fa0;color:#fff;text-decoration:none;font-weight:800;padding:14px 24px;border-radius:12px;font-size:16px;margin:0 4px 10px;'>Compartir por WhatsApp</a>
+        </td></tr>
+        <tr><td style='padding:6px 28px 8px;'>
+          <div style='background:#fff5f4;border:1px solid rgba(225,37,29,.3);border-left:4px solid #e1251d;border-radius:12px;padding:14px 16px;'>
+            <p style='margin:0;color:#414b59;font-size:14px;line-height:1.6;'>
+              La <strong style='color:#16181d;'>Esfera Nacional de Publicidad y Marketing</strong> te enviará
+              información de valor y casos de éxito para sumar a tu negocio o al de tus conocidos.
+            </p>
+          </div>
+        </td></tr>
+        ${qrBlock}
+        <tr><td style='padding:16px 28px 26px;text-align:center;border-top:1px solid #eef1f5;'>
+          <p style='font-size:12px;color:#6d7889;margin:8px 0 2px;'>Proyecto patrocinado por</p>
+          <div style='font-size:18px;font-weight:900;letter-spacing:.06em;color:#16181d;'>MAYAM</div>
+          <p style='font-size:12px;color:#6d7889;margin:2px 0 6px;'>Soluciones con Inteligencia Artificial</p>
+          <a href='https://mayam.lat' style='color:#1e4fa0;font-weight:700;font-size:13px;text-decoration:none;'>https://mayam.lat</a>
+        </td></tr>
+      </table>
+      <p style='font-size:11px;color:#6d7889;margin:16px 0 0;'>Summer Supplier Summit 2026 · Esfera Nacional de Publicidad y Marketing</p>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
@@ -106,11 +174,26 @@ Deno.serve(async (req) => {
     // Recupera el submission
     const { data: sub, error: subErr } = await supabase
       .from('submissions')
-      .select('id, generated_path, generated_url')
+      .select('id, generated_path, generated_url, project_id')
       .eq('id', submissionId)
       .single()
     if (subErr || !sub)
       return json({ error: 'No se encontró la foto (submission).' }, 404)
+
+    // Proyecto: define el tema/identidad del correo (y el QR del evento).
+    let project: { theme?: string; qr_path?: string | null } | null = null
+    if (sub.project_id) {
+      const { data: p } = await supabase
+        .from('projects')
+        .select('theme, qr_path')
+        .eq('id', sub.project_id)
+        .maybeSingle()
+      project = p
+    }
+    const qrUrl =
+      project?.theme === 'sss' && project?.qr_path
+        ? supabase.storage.from('frames').getPublicUrl(project.qr_path).data.publicUrl
+        : ''
 
     // Descarga la imagen generada para adjuntarla.
     // Si pesa demasiado (p. ej. imágenes con marco), se omite el adjunto y el
@@ -154,7 +237,13 @@ Deno.serve(async (req) => {
     })
 
     const ext = attachmentMime.includes('jpeg') ? 'jpg' : 'png'
-    const html = buildHtml(String(name).trim(), sub.generated_url)
+    const isSss = project?.theme === 'sss'
+    const html = isSss
+      ? buildHtmlSss(String(name).trim(), sub.generated_url, qrUrl)
+      : buildHtml(String(name).trim(), sub.generated_url)
+    const subject = isSss
+      ? '¡Tu foto del Summer Supplier Summit 2026! 📸'
+      : '¡Tu foto SNAPP está lista! 📸'
 
     // El correo va al invitado; opcionalmente con copia oculta (BCC).
     const recipient = String(email).trim()
@@ -164,7 +253,7 @@ Deno.serve(async (req) => {
       from: `${SMTP_FROM_NAME} <${SMTP_FROM}>`,
       to: recipient,
       ...(EMAIL_BCC ? { bcc: EMAIL_BCC } : {}),
-      subject: '¡Tu foto SNAPP está lista! 📸',
+      subject,
       html,
       content: `Hola ${name}! Esperamos que te haya gustado esta activación, te compartimos tu foto: ${sub.generated_url}`,
       attachments: attachmentB64

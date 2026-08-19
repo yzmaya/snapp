@@ -133,6 +133,7 @@ const empty = {
   frame_path: null,
   frame_source: 'generated',
   theme: 'default',
+  qr_path: null,
 }
 
 const MAX_VARIANTS = 10
@@ -199,6 +200,7 @@ function Dashboard({ session }) {
         frame_path: p.frame_path ?? null,
         frame_source: p.frame_source ?? 'generated',
         theme: p.theme ?? 'default',
+        qr_path: p.qr_path ?? null,
       })
   }, [selectedId, projects])
 
@@ -325,6 +327,37 @@ function Dashboard({ session }) {
     flash('Marco eliminado')
   }
 
+  const qrUrl = (path) =>
+    path ? supabase.storage.from('frames').getPublicUrl(path).data.publicUrl : null
+
+  const uploadQr = async (file) => {
+    if (!file || !selectedId) return
+    const ext = file.name.split('.').pop()
+    const path = `${selectedId}/qr.${ext}`
+    const { error: upErr } = await supabase.storage
+      .from('frames')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) return flash('Error subiendo QR: ' + upErr.message)
+    const { error } = await supabase
+      .from('projects')
+      .update({ qr_path: path })
+      .eq('id', selectedId)
+    if (error) return flash('Error: ' + error.message)
+    await load()
+    flash('Código QR actualizado ✓')
+  }
+
+  const deleteQr = async () => {
+    if (form.qr_path) await supabase.storage.from('frames').remove([form.qr_path])
+    const { error } = await supabase
+      .from('projects')
+      .update({ qr_path: null })
+      .eq('id', selectedId)
+    if (error) return flash('Error: ' + error.message)
+    await load()
+    flash('Código QR eliminado')
+  }
+
   const exampleUrl = (path) =>
     path ? supabase.storage.from('examples').getPublicUrl(path).data.publicUrl : null
 
@@ -342,12 +375,14 @@ function Dashboard({ session }) {
         'a la persona o personas de la FOTO — mantén EXACTAMENTE su rostro, expresión, ' +
         'gesto, mirada, peinado, ropa, postura y el fondo tal como están, sin retocar ' +
         'ni forzar sonrisas. Tu ÚNICA tarea es AÑADIR al personaje de la imagen de ' +
-        'REFERENCIA (recortado, con fondo transparente), integrándolo de forma realista ' +
-        'junto a la persona, muy cerca y en contacto físico: el personaje pasa el brazo ' +
-        'por detrás y apoya la mano sobre el hombro de la persona, adaptándose a la ' +
-        'iluminación, perspectiva, escala y sombras de la FOTO para que se vea natural y ' +
-        'no pegado. Conserva también de forma fiel y reconocible el rostro y los rasgos ' +
-        'del personaje de la referencia.',
+        'REFERENCIA (recortado, con fondo transparente) COLOCÁNDOLO AL LADO de la ' +
+        'persona, en contacto amistoso (el brazo por detrás y la mano sobre el hombro), ' +
+        'pero SIN superponerse ni tapar la cabeza ni la cara de la persona: ambos ' +
+        'rostros deben quedar completos, visibles y sin recortes. Ajusta la escala del ' +
+        'personaje para que no cubra a la persona, con iluminación, perspectiva y ' +
+        'sombras coherentes para que se vea natural y no pegado. Conserva de forma fiel ' +
+        'y reconocible el rostro y los rasgos tanto de la persona como del personaje ' +
+        'de la referencia.',
     })
     if (error) return flash('Error: ' + error.message)
     await loadVariants(selectedId)
@@ -497,6 +532,23 @@ function Dashboard({ session }) {
                   panel de administración no cambia.
                 </span>
               </div>
+
+              {form.theme === 'sss' && (
+                <div className="field">
+                  <label>Código QR del correo (directorio de la Esfera)</label>
+                  <span className="admin-hint" style={{ margin: '0 0 8px' }}>
+                    Se incluye en el correo brandeado del evento. Sube el PNG del QR.
+                  </span>
+                  <div className="logos" style={{ gridTemplateColumns: '1fr' }}>
+                    <LogoSlot
+                      title="Código QR (PNG)"
+                      url={qrUrl(form.qr_path)}
+                      onUpload={(f) => uploadQr(f)}
+                      onDelete={() => deleteQr()}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="field">
                 <label>Prompt (efecto que aplica la IA)</label>
