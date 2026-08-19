@@ -190,9 +190,15 @@ Deno.serve(async (req) => {
         .maybeSingle()
       project = p
     }
+    // QR del evento: usa el subido en el panel (qr_path) o, si no hay, el QR
+    // hospedado en el sitio público (directorio de la Esfera).
+    const SSS_QR_FALLBACK =
+      Deno.env.get('SSS_QR_URL') ?? 'https://yzmaya.github.io/snapp/sss-qr.png'
     const qrUrl =
-      project?.theme === 'sss' && project?.qr_path
-        ? supabase.storage.from('frames').getPublicUrl(project.qr_path).data.publicUrl
+      project?.theme === 'sss'
+        ? project?.qr_path
+          ? supabase.storage.from('frames').getPublicUrl(project.qr_path).data.publicUrl
+          : SSS_QR_FALLBACK
         : ''
 
     // Descarga la imagen generada para adjuntarla.
