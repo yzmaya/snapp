@@ -206,8 +206,7 @@ export default function Kiosk() {
               <div style={{ display: 'grid', placeItems: 'center', gap: 16 }}>
                 <div className="spinner" />
                 <p>
-                  Creando tu versión{projectTitle ? ` ${projectTitle}` : ''} con
-                  inteligencia artificial…
+                  Haciendo snapp…
                   <br />
                   Esto puede tardar unos segundos.
                 </p>

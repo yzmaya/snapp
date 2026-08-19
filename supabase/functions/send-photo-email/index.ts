@@ -1,7 +1,7 @@
 // ============================================================
 // SNAPP · Edge Function: send-photo-email
 // Actualiza los datos del submission y envía el correo con la
-// foto LEGO (adjunta + enlace) vía SMTP de DreamHost.
+// foto SNAPP (adjunta + enlace) vía SMTP de DreamHost.
 // ============================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
@@ -52,7 +52,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 function buildHtml(name: string, imageUrl: string) {
   // Mensaje pre-cargado para el botón de WhatsApp (incluye el enlace a la foto)
   const waText = encodeURIComponent(
-    `¡Mira mi foto SNAPP convertida en LEGO! 🧱 ${imageUrl}`,
+    `¡Mira mi foto SNAPP! ✨ ${imageUrl}`,
   )
   const waHref = `https://wa.me/?text=${waText}`
   return `<!doctype html>
@@ -72,7 +72,7 @@ function buildHtml(name: string, imageUrl: string) {
           </p>
         </td></tr>
         <tr><td style='padding:20px 28px;'>
-          <img src='${imageUrl}' alt='Tu foto SNAPP en LEGO' width='100%' style='display:block;width:100%;border-radius:14px;' />
+          <img src='${imageUrl}' alt='Tu foto SNAPP' width='100%' style='display:block;width:100%;border-radius:14px;' />
         </td></tr>
         <tr><td style='padding:0 28px 28px;text-align:center;'>
           <a href='${imageUrl}' style='display:inline-block;background:#2d6cdf;color:#fff;text-decoration:none;font-weight:800;padding:14px 24px;border-radius:14px;font-size:16px;margin:0 4px 10px;'>Ver / descargar mi foto</a>

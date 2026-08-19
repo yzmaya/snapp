@@ -4,7 +4,7 @@ import { gsap } from 'gsap'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * Modal con la foto LEGO generada.
+ * Modal con la foto SNAPP generada.
  * Sub-estados internos: 'result' → 'form' → 'sent'.
  *  - onCancel(): cierra y vuelve a la cámara.
  *  - onSend(form): envía el correo (Promise). Debe lanzar en caso de error.
@@ -109,10 +109,10 @@ export default function ResultModal({
       <div className="modal" ref={cardRef}>
         {view === 'result' && (
           <div data-view="result">
-            <h2 className="modal__title">¡Tu SNAPP está listo! 🧱</h2>
-            <p className="modal__subtitle">Así te ves en versión LEGO</p>
+            <h2 className="modal__title">¡Tu SNAPP está listo!</h2>
+            <p className="modal__subtitle">Aquí tienes tu foto</p>
             <div className="modal__img" style={{ marginTop: 16 }}>
-              <img src={imageUrl} alt="Tu versión LEGO" />
+              <img src={imageUrl} alt="Tu foto SNAPP" />
             </div>
 
             {/* Botón Imprimir: solo si la SELPHY está conectada (helper local).
