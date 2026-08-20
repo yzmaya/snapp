@@ -1089,3 +1089,70 @@ body {
   font-weight: 700;
   margin: 0;
 }
+
+/* ============================================================
+   Teclado en pantalla (tótem táctil) · teclas grandes
+   ============================================================ */
+.modal--wide {
+  max-width: 720px;
+}
+.field input.is-active-field {
+  border-color: var(--blue-400);
+  box-shadow: 0 0 0 3px rgba(45, 108, 223, 0.28);
+}
+.vk {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  user-select: none;
+  touch-action: manipulation;
+}
+.vk__row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.vk__key {
+  flex: 1 1 0;
+  min-width: 42px;
+  min-height: 58px;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--ink-100);
+  background: rgba(122, 166, 245, 0.12);
+  border: 1px solid rgba(122, 166, 245, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s ease, transform 0.05s ease;
+}
+.vk__key:active {
+  background: var(--blue-500);
+  color: #fff;
+  transform: translateY(1px);
+}
+.vk__key--wide {
+  flex: 2.4 1 0;
+  font-size: 17px;
+}
+.vk__key--bksp {
+  flex: 1.6 1 0;
+}
+/* Teclado numérico: centrado y con teclas más grandes */
+.vk--numeric {
+  max-width: 360px;
+  margin: 6px auto 0;
+}
+.vk--numeric .vk__key {
+  min-height: 66px;
+  font-size: 28px;
+}
+/* Tema claro del evento: teclas más definidas sobre blanco */
+.app[data-theme='sss'] .vk__key {
+  background: #f4f6f9;
+  border-color: rgba(30, 79, 160, 0.25);
+}

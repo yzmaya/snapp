@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
+import OnScreenKeyboard from './OnScreenKeyboard.jsx'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -18,6 +19,7 @@ export default function ResultModal({
 }) {
   const [view, setView] = useState('result') // result | form | sent
   const [form, setForm] = useState({ name: '', email: '', phone: '' })
+  const [activeField, setActiveField] = useState('name') // teclado en pantalla
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [printState, setPrintState] = useState('idle') // idle | printing | done | error
@@ -79,6 +81,32 @@ export default function ResultModal({
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
+  // Layout del teclado en pantalla según el campo activo
+  const kbLayout =
+    activeField === 'phone' ? 'numeric' : activeField === 'email' ? 'email' : 'letters'
+
+  // Inserción desde el teclado en pantalla (tótem táctil)
+  const handleKey = (k) => {
+    setForm((f) => {
+      let v = f[activeField] ?? ''
+      if (k === '{bksp}') {
+        v = v.slice(0, -1)
+      } else if (k === '{space}') {
+        if (activeField === 'name') v += ' '
+      } else {
+        let ch = k
+        if (activeField === 'name') {
+          const atStart = v.length === 0 || v.endsWith(' ')
+          ch = atStart ? ch.toUpperCase() : ch.toLowerCase()
+        } else if (activeField === 'email') {
+          ch = ch.toLowerCase()
+        }
+        v += ch
+      }
+      return { ...f, [activeField]: v }
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -106,7 +134,7 @@ export default function ResultModal({
 
   return (
     <div className="modal-backdrop" ref={backdropRef}>
-      <div className="modal" ref={cardRef}>
+      <div className={`modal${view === 'form' ? ' modal--wide' : ''}`} ref={cardRef}>
         {view === 'result' && (
           <div data-view="result">
             <h2 className="modal__title">¡Tu SNAPP está listo!</h2>
@@ -169,10 +197,13 @@ export default function ResultModal({
                 <input
                   id="name"
                   type="text"
-                  autoComplete="name"
+                  inputMode="none"
+                  autoComplete="off"
                   placeholder="Tu nombre"
                   value={form.name}
                   onChange={update('name')}
+                  onFocus={() => setActiveField('name')}
+                  className={activeField === 'name' ? 'is-active-field' : ''}
                   disabled={sending}
                 />
               </div>
@@ -181,11 +212,13 @@ export default function ResultModal({
                 <input
                   id="email"
                   type="email"
-                  inputMode="email"
-                  autoComplete="email"
+                  inputMode="none"
+                  autoComplete="off"
                   placeholder="tu@correo.com"
                   value={form.email}
                   onChange={update('email')}
+                  onFocus={() => setActiveField('email')}
+                  className={activeField === 'email' ? 'is-active-field' : ''}
                   disabled={sending}
                 />
               </div>
@@ -196,14 +229,18 @@ export default function ResultModal({
                 <input
                   id="phone"
                   type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
+                  inputMode="none"
+                  autoComplete="off"
                   placeholder="55 1234 5678"
                   value={form.phone}
                   onChange={update('phone')}
+                  onFocus={() => setActiveField('phone')}
+                  className={activeField === 'phone' ? 'is-active-field' : ''}
                   disabled={sending}
                 />
               </div>
+
+              <OnScreenKeyboard layout={kbLayout} onKey={handleKey} />
 
               {error && <p className="form__error">{error}</p>}
 
