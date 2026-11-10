@@ -9,7 +9,7 @@ const MODELS = [
   { key: 'nano-banana-pro', label: 'Nano Banana Pro · mejor calidad' },
   { key: 'vertex', label: 'Vertex · empresarial (requiere credenciales)' },
 ]
-const isAdminEmail = (email) =>
+export const isAdminEmail = (email) =>
   !!email && email.toLowerCase().endsWith(ADMIN_DOMAIN)
 
 export default function Admin() {
@@ -36,7 +36,8 @@ export default function Admin() {
 }
 
 // ---------------- Login (enlace mágico) ----------------
-function Login() {
+// redirectHash: a qué ruta vuelve el enlace mágico (ej. '#/print').
+export function Login({ redirectHash = '#/admin', title = 'Panel SNAPP' }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -50,7 +51,7 @@ function Login() {
       return
     }
     setLoading(true)
-    const emailRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/admin`
+    const emailRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}${redirectHash}`
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo },
@@ -66,7 +67,7 @@ function Login() {
         <div className="brand__badge" style={{ margin: '0 auto 8px' }}>
           <CameraIcon />
         </div>
-        <h1 className="admin-title">Panel SNAPP</h1>
+        <h1 className="admin-title">{title}</h1>
         {sent ? (
           <p className="admin-muted" style={{ textAlign: 'center' }}>
             📧 Te enviamos un enlace de acceso a <strong>{email}</strong>.
@@ -101,7 +102,7 @@ function Login() {
   )
 }
 
-function Unauthorized({ email }) {
+export function Unauthorized({ email }) {
   return (
     <div className="admin-center">
       <div className="admin-card admin-login">

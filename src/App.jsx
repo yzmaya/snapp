@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Kiosk from './pages/Kiosk.jsx'
 import Admin from './pages/Admin.jsx'
 import PrinterDiag from './pages/PrinterDiag.jsx'
+import Reprint from './pages/Reprint.jsx'
 
 export default function App() {
   return (
@@ -9,6 +10,7 @@ export default function App() {
       <Route path="/" element={<Kiosk />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/impresora" element={<PrinterDiag />} />
+      <Route path="/print" element={<Reprint />} />
     </Routes>
   )
 }

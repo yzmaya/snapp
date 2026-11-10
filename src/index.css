@@ -1156,3 +1156,30 @@ body {
   background: #f4f6f9;
   border-color: rgba(30, 79, 160, 0.25);
 }
+
+/* ---------- Reimprimir (/#/print) ---------- */
+.reprint-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.reprint-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.reprint-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #fff;
+}
+.reprint-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
